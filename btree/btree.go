@@ -37,24 +37,23 @@ func (n *Node) locateLocally(x int) int {
 	return len(n.keys)
 }
 
-func (n *Node) insertRec(x int) (k int, m *Node) {
+func (n *Node) insertRec(x int) (key int, m *Node) {
 	i := n.locateLocally(x)
 	if n.isLeaf {
 		n.InsertInt(i, x)
 	} else {
-		s, l := n.children[i].insertRec(x)
-		if l != nil {
-			n.InsertInt(i, s)
-			n.InsertNode(i, l)
-
+		inserted_key, inserted_m := n.children[i].insertRec(x)
+		if m != nil {
+			n.InsertInt(i, inserted_key)
+			n.InsertNode(i, inserted_m)
 		}
 	}
 	if len(n.keys) < n.degree {
-		k = 0
+		key = 0
 		m = nil
 	} else {
 		mid := len(n.keys) / 2
-		k = n.keys[mid]
+		key = n.keys[mid]
 		m = NewNode(n.degree)
 		m.isLeaf = n.isLeaf
 		m.keys = make([]int, mid)
@@ -82,7 +81,7 @@ func NewTree(degree int) *BTree {
 	return t
 }
 
-func (t *BTree) insert(x int) {
+func (t *BTree) Insert(x int) {
 	k, m := t.top.insertRec(x)
 	if m != nil {
 		n := NewNode(t.degree)
@@ -132,29 +131,29 @@ func (top *Node) Print() {
 
 func main() {
 	t := NewTree(3)
-	t.insert(10)
-	t.insert(20)
-	t.insert(30)
-	t.insert(32)
-	t.insert(11)
-	t.insert(9)
+	t.Insert(10)
+	t.Insert(20)
+	t.Insert(30)
+	t.Insert(32)
+	t.Insert(11)
+	t.Insert(9)
 
 	t.top.Print()
-	t.insert(100)
+	t.Insert(100)
 
 	t.top.Print()
-	t.insert(103)
+	t.Insert(103)
 
 	t.top.Print()
-	t.insert(108)
+	t.Insert(108)
 
 	t.top.Print()
-	t.insert(111)
+	t.Insert(111)
 
 	t.top.Print()
-	t.insert(150)
+	t.Insert(150)
 
 	t.top.Print()
-	t.insert(80)
+	t.Insert(80)
 	t.top.Print()
 }
