@@ -9,20 +9,20 @@ type Node struct {
 	children []*Node
 }
 
-func NewNode(degree int) *Node {
+func newNode(degree int) *Node {
 	n := &Node{}
 	n.isLeaf = true
 	n.degree = degree
 	return n
 }
 
-func (n *Node) InsertInt(idx int, val int) {
+func (n *Node) insertInt(idx int, val int) {
 	n.keys = append(n.keys, 0)
 	copy(n.keys[idx+1:], n.keys[idx:])
 	n.keys[idx] = val
 }
 
-func (n *Node) InsertNode(idx int, item *Node) {
+func (n *Node) insertNode(idx int, item *Node) {
 	n.children = append(n.children, nil)
 	copy(n.children[idx+1:], n.children[idx:])
 	n.children[idx] = item
@@ -40,12 +40,12 @@ func (n *Node) locateLocally(x int) int {
 func (n *Node) insertRec(x int) (key int, m *Node) {
 	i := n.locateLocally(x)
 	if n.isLeaf {
-		n.InsertInt(i, x)
+		n.insertInt(i, x)
 	} else {
 		inserted_key, inserted_m := n.children[i].insertRec(x)
-		if m != nil {
-			n.InsertInt(i, inserted_key)
-			n.InsertNode(i, inserted_m)
+		if inserted_m != nil {
+			n.insertInt(i, inserted_key)
+			n.insertNode(i, inserted_m)
 		}
 	}
 	if len(n.keys) < n.degree {
@@ -54,7 +54,7 @@ func (n *Node) insertRec(x int) (key int, m *Node) {
 	} else {
 		mid := len(n.keys) / 2
 		key = n.keys[mid]
-		m = NewNode(n.degree)
+		m = newNode(n.degree)
 		m.isLeaf = n.isLeaf
 		m.keys = make([]int, mid)
 		copy(m.keys, n.keys[:mid])
@@ -74,7 +74,7 @@ type BTree struct {
 }
 
 func NewTree(degree int) *BTree {
-	top := NewNode(degree)
+	top := newNode(degree)
 	t := &BTree{}
 	t.top = top
 	t.degree = degree
@@ -84,7 +84,7 @@ func NewTree(degree int) *BTree {
 func (t *BTree) Insert(x int) {
 	k, m := t.top.insertRec(x)
 	if m != nil {
-		n := NewNode(t.degree)
+		n := newNode(t.degree)
 		n.isLeaf = false
 		n.keys = append(n.keys, k)
 		n.children = append(n.children, m, t.top)
