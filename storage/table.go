@@ -29,30 +29,33 @@ type Record struct {
 	data []byte
 }
 
-type Storage struct {
+type Table struct {
 	cols []Column
 	data []Record
+	// 1. data []byte data[100:104] 1000
+	// 2. pages []Page pages 100 * 10
+	// page -> []byte
 }
 
-func NewStorage() Storage {
-	return Storage{}
+func NewTable() Table {
+	return Table{}
 }
 
-func (s *Storage) AddColumn(name string) {
+func (t *Table) AddColumn(name string) {
 	var pos uint
-	if len(s.cols) == 0 {
+	if len(t.cols) == 0 {
 		pos = 0
 	} else {
-		last := s.cols[len(s.cols)-1]
+		last := t.cols[len(t.cols)-1]
 		pos = last.pos + last.ty.size
 	}
 	ty := Type{name: "int", size: 4}
-	s.cols = append(s.cols, Column{ty: ty, name: name, pos: pos})
+	t.cols = append(t.cols, Column{ty: ty, name: name, pos: pos})
 	// fmt.Println(s.cols[len(s.cols)-1])
 }
 
-func (s *Storage) addRecord(rec Record) {
-	s.data = append(s.data, rec)
+func (t *Table) addRecord(rec Record) {
+	t.data = append(t.data, rec)
 	// fmt.Println(rec.data)
 }
 
@@ -78,34 +81,34 @@ func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
 	return
 }
 
-func (s *Storage) Add(args ...interface{}) error {
-	bytes, err := encode(s.cols, args...)
+func (t *Table) Add(args ...interface{}) error {
+	bytes, err := encode(t.cols, args...)
 	if err != nil {
 		return err
 	}
-	s.addRecord(Record{data: bytes})
+	t.addRecord(Record{data: bytes})
 	return nil
 }
 
-func (s *Storage) selectInt(col Column) (res []int32, err error) {
+func (t *Table) selectInt(col Column) (res []int32, err error) {
 	if col.ty.name != "int" {
 		return nil, errors.New("you must specify int type column")
 	}
-	for _, rec := range s.data {
+	for _, rec := range t.data {
 		bytes := rec.data[col.pos : col.pos+col.ty.size]
 		res = append(res, int32(binary.LittleEndian.Uint32(bytes)))
 	}
 	return
 }
 
-func (s *Storage) Select(names ...string) (res [][]int32, err error) {
+func (t *Table) Select(names ...string) (res [][]int32, err error) {
 	for _, name := range names {
-		for _, col := range s.cols {
+		for _, col := range t.cols {
 			if name != col.name {
 				continue
 			}
 			if col.ty.name == "int" {
-				values, err := s.selectInt(col)
+				values, err := t.selectInt(col)
 				if err != nil {
 					return nil, err
 				}
