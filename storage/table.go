@@ -46,18 +46,33 @@ func NewTable() Table {
 }
 
 func (t *Table) Write() {
-	if len(t.pages) == 0 {
-		t.pages = append(t.pages, newPage())
-	}
 	for _, rec := range t.data {
-		t.pages[0].setBytes(rec.data)
+		for i := 0; ; i++ {
+			if len(t.pages) <= i {
+				t.pages = append(t.pages, newPage())
+			}
+
+			res := t.pages[i].setBytes(rec.data)
+			if res {
+				break
+			}
+		}
 	}
 	file, err := os.Create("testfile")
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
-	file.Write(t.pages[0].bb)
+	for i, pg := range t.pages {
+		_, err := file.Seek(int64(i*PageSize), 0)
+		if err != nil {
+			panic(err)
+		}
+		_, err = file.Write(pg.bb)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func (t *Table) Read() {
@@ -67,17 +82,29 @@ func (t *Table) Read() {
 	}
 	defer file.Close()
 	buf := make([]byte, PageSize)
-	file.Read(buf)
-	if len(t.pages) == 0 {
+	t.pages = make([]Page, 0)
+	for i := 0; ; i++ {
+		n, err := file.Read(buf)
+		if n == 0 {
+			break
+		}
+		if err != nil {
+			panic(err)
+		}
 		t.pages = append(t.pages, newPage())
+		t.pages[i].setBytes(buf)
 	}
-	t.pages[0].setBytes(buf)
+
 	t.data = make([]Record, 0)
 	sz := int(t.getRecordSize())
-	for i := 0; i < sz; i++ {
-		t.data = append(t.data, Record{data: buf[i*sz : (i+1)*sz]})
+
+	for i := 0; i < len(t.pages); i++ {
+		for j := 0; j < PageSize/sz; j++ {
+			t.data = append(t.data, Record{data: t.pages[i].bb[j*sz : (j+1)*sz]})
+		}
 	}
 }
+
 func (t *Table) AddColumn(name string) {
 	var pos uint
 	if len(t.cols) == 0 {

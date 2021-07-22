@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 )
 
-const PageSize = 4096
+const PageSize = 100
 
 type Page struct {
 	// byte buffer
@@ -17,8 +17,12 @@ func newPage() Page {
 	return pg
 }
 
-func (pg *Page)setBytes(bytes []byte){
+func (pg *Page) setBytes(bytes []byte) bool {
+	if len(pg.bb) == PageSize {
+		return false
+	}
 	pg.bb = append(pg.bb, bytes...)
+	return true
 }
 
 func (pg *Page) getInt(offset int) uint32 {
