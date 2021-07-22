@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"os"
 )
 
 type Type struct {
@@ -29,30 +30,96 @@ type Record struct {
 	data []byte
 }
 
-type Storage struct {
-	cols []Column
-	data []Record
+type Table struct {
+	cols  []Column
+	data  []Record
+	pages []Page
 }
 
-func NewStorage() Storage {
-	return Storage{}
+func (t *Table) getRecordSize() uint {
+	last := t.cols[len(t.cols)-1]
+	return last.pos + last.ty.size
 }
 
-func (s *Storage) AddColumn(name string) {
+func NewTable() Table {
+	return Table{}
+}
+
+func (t *Table) Write() {
+	for _, rec := range t.data {
+		for i := 0; ; i++ {
+			if len(t.pages) <= i {
+				t.pages = append(t.pages, newPage())
+			}
+
+			res := t.pages[i].setBytes(rec.data)
+			if res {
+				break
+			}
+		}
+	}
+	file, err := os.Create("testfile")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	for i, pg := range t.pages {
+		_, err := file.Seek(int64(i*PageSize), 0)
+		if err != nil {
+			panic(err)
+		}
+		_, err = file.Write(pg.bb)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func (t *Table) Read() {
+	file, err := os.Open("testfile")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	buf := make([]byte, PageSize)
+	t.pages = make([]Page, 0)
+	for i := 0; ; i++ {
+		n, err := file.Read(buf)
+		if n == 0 {
+			break
+		}
+		if err != nil {
+			panic(err)
+		}
+		t.pages = append(t.pages, newPage())
+		t.pages[i].setBytes(buf)
+	}
+
+	t.data = make([]Record, 0)
+	sz := int(t.getRecordSize())
+
+	for i := 0; i < len(t.pages); i++ {
+		for j := 0; j < PageSize/sz; j++ {
+			t.data = append(t.data, Record{data: t.pages[i].bb[j*sz : (j+1)*sz]})
+		}
+	}
+}
+
+func (t *Table) AddColumn(name string) {
 	var pos uint
-	if len(s.cols) == 0 {
+	if len(t.cols) == 0 {
 		pos = 0
 	} else {
-		last := s.cols[len(s.cols)-1]
+		last := t.cols[len(t.cols)-1]
 		pos = last.pos + last.ty.size
 	}
 	ty := Type{name: "int", size: 4}
-	s.cols = append(s.cols, Column{ty: ty, name: name, pos: pos})
+	t.cols = append(t.cols, Column{ty: ty, name: name, pos: pos})
 	// fmt.Println(s.cols[len(s.cols)-1])
 }
 
-func (s *Storage) addRecord(rec Record) {
-	s.data = append(s.data, rec)
+func (t *Table) addRecord(rec Record) {
+	t.data = append(t.data, rec)
 	// fmt.Println(rec.data)
 }
 
@@ -78,34 +145,34 @@ func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
 	return
 }
 
-func (s *Storage) Add(args ...interface{}) error {
-	bytes, err := encode(s.cols, args...)
+func (t *Table) Add(args ...interface{}) error {
+	bytes, err := encode(t.cols, args...)
 	if err != nil {
 		return err
 	}
-	s.addRecord(Record{data: bytes})
+	t.addRecord(Record{data: bytes})
 	return nil
 }
 
-func (s *Storage) selectInt(col Column) (res []int32, err error) {
+func (t *Table) selectInt(col Column) (res []int32, err error) {
 	if col.ty.name != "int" {
 		return nil, errors.New("you must specify int type column")
 	}
-	for _, rec := range s.data {
+	for _, rec := range t.data {
 		bytes := rec.data[col.pos : col.pos+col.ty.size]
 		res = append(res, int32(binary.LittleEndian.Uint32(bytes)))
 	}
 	return
 }
 
-func (s *Storage) Select(names ...string) (res [][]int32, err error) {
+func (t *Table) Select(names ...string) (res [][]int32, err error) {
 	for _, name := range names {
-		for _, col := range s.cols {
+		for _, col := range t.cols {
 			if name != col.name {
 				continue
 			}
 			if col.ty.name == "int" {
-				values, err := s.selectInt(col)
+				values, err := t.selectInt(col)
 				if err != nil {
 					return nil, err
 				}
