@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"os"
 )
 
 type Type struct {
@@ -30,17 +31,53 @@ type Record struct {
 }
 
 type Table struct {
-	cols []Column
-	data []Record
-	// 1. data []byte data[100:104] 1000
-	// 2. pages []Page pages 100 * 10
-	// page -> []byte
+	cols  []Column
+	data  []Record
+	pages []Page
+}
+
+func (t *Table) getRecordSize() uint {
+	last := t.cols[len(t.cols)-1]
+	return last.pos + last.ty.size
 }
 
 func NewTable() Table {
 	return Table{}
 }
 
+func (t *Table) Write() {
+	if len(t.pages) == 0 {
+		t.pages = append(t.pages, newPage())
+	}
+	for _, rec := range t.data {
+		t.pages[0].setBytes(rec.data)
+	}
+	file, err := os.Create("testfile")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	file.Write(t.pages[0].bb)
+}
+
+func (t *Table) Read() {
+	file, err := os.Open("testfile")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	buf := make([]byte, PageSize)
+	file.Read(buf)
+	if len(t.pages) == 0 {
+		t.pages = append(t.pages, newPage())
+	}
+	t.pages[0].setBytes(buf)
+	t.data = make([]Record, 0)
+	sz := int(t.getRecordSize())
+	for i := 0; i < sz; i++ {
+		t.data = append(t.data, Record{data: buf[i*sz : (i+1)*sz]})
+	}
+}
 func (t *Table) AddColumn(name string) {
 	var pos uint
 	if len(t.cols) == 0 {
