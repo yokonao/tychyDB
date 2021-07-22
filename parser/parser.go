@@ -27,7 +27,7 @@ import (
 // 	}
 // }
 
-func parseQuery(cargs []string) string{
+func ParseQuery(cargs []string) string{
 	if cargs[0] != "select" {
 		fmt.Println("不正なクエリです")
 		os.Exit(1)
