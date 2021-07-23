@@ -29,7 +29,7 @@ func newPageHeaderFromBytes(bytes []byte) PageHeader {
 	if len(bytes) != PageHeaderSize {
 		panic(errors.New("bytes length must be PageHeaderSize"))
 	}
-	isLeaf := bytes[0] == 0
+	isLeaf := bytes[0] == 1
 	numOfPtr := binary.BigEndian.Uint32(bytes[1:5])
 	return PageHeader{isLeaf: isLeaf, numOfPtr: numOfPtr}
 }
@@ -57,11 +57,21 @@ func newPageFromBytes(bytes []byte) Page {
 	return pg
 }
 
+func newNonLeafPage() Page {
+	pg := Page{}
+	pg.header = PageHeader{isLeaf: false, numOfPtr: 0}
+	pg.bb = make([]byte, 0, PageSize)
+	return pg
+}
+
 func (pg *Page) headerSize() int {
 	return 5
 }
 
 func (pg *Page) setBytes(bytes []byte) bool {
+	if !pg.header.isLeaf {
+		return false
+	}
 	if (pg.headerSize() + len(pg.bb) + len(bytes)) > PageSize {
 		return false
 	}

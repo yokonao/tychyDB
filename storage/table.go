@@ -40,7 +40,9 @@ func (t *Table) getRecordSize() uint {
 }
 
 func NewTable() Table {
-	return Table{}
+	t := Table{}
+	t.pages = append(t.pages, newNonLeafPage())
+	return t
 }
 
 func (t *Table) Write() {
@@ -128,6 +130,9 @@ func (t *Table) selectInt(col Column) (res []int32, err error) {
 		return nil, errors.New("you must specify int type column")
 	}
 	for _, pg := range t.pages {
+		if !pg.header.isLeaf {
+			continue
+		}
 		numOfPtr := pg.header.numOfPtr
 		for i := 0; uint32(i) < numOfPtr; i++ {
 			sz := t.getRecordSize()
