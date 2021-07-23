@@ -30,6 +30,11 @@ func (rec Record) fromBytes(bytes []byte) Cell{
 	return rec
 }
 
+func (rec Record) getKey() int32{
+	// 暫定的に第1カラムの値をキーとして扱う
+	return int32(binary.BigEndian.Uint32(rec.data[:4]))
+}
+
 type KeyCell struct {
 	key       int32
 	pageIndex uint32

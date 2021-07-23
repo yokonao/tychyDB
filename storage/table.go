@@ -57,6 +57,7 @@ func (t *Table) Read() {
 
 		t.pages = append(t.pages, pg)
 	}
+	fmt.Println(t.pages)
 }
 
 func (t *Table) AddColumn(name string) {
@@ -78,8 +79,9 @@ func (t *Table) addRecord(rec Record) {
 			t.pages = append(t.pages, newPage())
 		}
 
-		res := t.pages[i].addRecord(rec)
+		res, index := t.pages[i].addRecord(rec)
 		if res {
+			t.pages[0].addKeyCell(KeyCell{key: rec.getKey(), pageIndex: uint32(i), ptrIndex: index})
 			break
 		}
 	}

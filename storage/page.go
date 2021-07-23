@@ -5,7 +5,7 @@ import (
 	"errors"
 )
 
-const PageSize = 100
+const PageSize = 4096
 const PageHeaderSize = 5
 
 type PageHeader struct {
@@ -36,10 +36,9 @@ func newPageHeaderFromBytes(bytes []byte) PageHeader {
 
 type Page struct {
 	// byte buffer
-	header   PageHeader
-	ptrs     []uint32
-	cells    []Cell
-	keyCells []KeyCell
+	header PageHeader
+	ptrs   []uint32
+	cells  []Cell
 }
 
 func newPage() Page {
@@ -58,8 +57,13 @@ func newPageFromBytes(bytes []byte) Page {
 	pg.header = newPageHeaderFromBytes(bytes[:5])
 	pg.setPtrsFromBytes(pg.header.numOfPtr, bytes[5:5+4*pg.header.numOfPtr])
 	for _, ptr := range pg.ptrs {
-		rec := Record{}.fromBytes(bytes[ptr:]).(Record)
-		pg.cells = append(pg.cells, rec)
+		var cell Cell
+		if pg.header.isLeaf {
+			cell = Record{}.fromBytes(bytes[ptr:])
+		} else {
+			cell = KeyCell{}.fromBytes(bytes[ptr:])
+		}
+		pg.cells = append(pg.cells, cell)
 	}
 	return pg
 }
@@ -94,19 +98,32 @@ func (pg *Page) getContentSize() (size uint32) {
 	return
 }
 
-func (pg *Page) addRecord(rec Record) bool {
+func (pg *Page) addRecord(rec Record) (bool, uint32) {
 	if !pg.header.isLeaf {
-		return false
+		return false, 0
 	}
 	if pg.headerSize()+4*(pg.header.numOfPtr+1) > PageSize-pg.getContentSize()-rec.getSize() {
-		return false
+		return false, 0
 	}
 	pg.header.numOfPtr++
 
 	pg.ptrs = append(pg.ptrs, uint32(PageSize-pg.getContentSize()-rec.getSize()))
 	pg.cells = append(pg.cells, rec)
 
-	return true
+	return true, pg.header.numOfPtr
+}
+
+func (pg *Page) addKeyCell(cell KeyCell) {
+	if pg.header.isLeaf {
+		panic(errors.New("cannot add KeyCell to Leaf Page"))
+	}
+	if pg.headerSize()+4*(pg.header.numOfPtr+1) > PageSize-pg.getContentSize()-cell.getSize() {
+		panic(errors.New("full root page"))
+	}
+	pg.header.numOfPtr++
+
+	pg.ptrs = append(pg.ptrs, uint32(PageSize-pg.getContentSize()-cell.getSize()))
+	pg.cells = append(pg.cells, cell)
 }
 
 func (pg *Page) toBytes() []byte {
