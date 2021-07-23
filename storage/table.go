@@ -87,7 +87,7 @@ func (t *Table) addRecord(rec Record) {
 			t.pages = append(t.pages, newPage())
 		}
 
-		res := t.pages[i].setBytes(rec.data)
+		res := t.pages[i].addRecord(rec.data)
 		if res {
 			break
 		}
