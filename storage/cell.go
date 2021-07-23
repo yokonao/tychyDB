@@ -5,7 +5,7 @@ import "encoding/binary"
 type Cell interface {
 	getSize() uint32
 	toBytes() []byte
-	fromBytes([]byte)
+	fromBytes([]byte) Cell
 }
 
 type Record struct {
@@ -13,20 +13,21 @@ type Record struct {
 	data []byte
 }
 
-func (rec *Record) getSize() uint32 {
+func (rec Record) getSize() uint32 {
 	return 4 + uint32(len(rec.data))
 }
 
-func (rec *Record) toBytes() []byte {
+func (rec Record) toBytes() []byte {
 	buf := make([]byte, rec.getSize())
 	binary.BigEndian.PutUint32(buf[:4], rec.size)
 	copy(buf[4:], rec.data)
 	return buf
 }
 
-func (rec *Record) fromBytes(bytes []byte) {
+func (rec Record) fromBytes(bytes []byte) Cell{
 	rec.size = binary.BigEndian.Uint32(bytes[:4])
 	rec.data = bytes[4 : 4+rec.size]
+	return rec
 }
 
 type KeyCell struct {

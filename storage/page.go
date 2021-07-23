@@ -38,7 +38,7 @@ type Page struct {
 	// byte buffer
 	header   PageHeader
 	ptrs     []uint32
-	cells    []Record
+	cells    []Cell
 	keyCells []KeyCell
 }
 
@@ -46,7 +46,7 @@ func newPage() Page {
 	pg := Page{}
 	pg.header = PageHeader{isLeaf: true, numOfPtr: 0}
 	pg.ptrs = make([]uint32, 0)
-	pg.cells = make([]Record, 0)
+	pg.cells = make([]Cell, 0)
 	return pg
 }
 
@@ -58,8 +58,7 @@ func newPageFromBytes(bytes []byte) Page {
 	pg.header = newPageHeaderFromBytes(bytes[:5])
 	pg.setPtrsFromBytes(pg.header.numOfPtr, bytes[5:5+4*pg.header.numOfPtr])
 	for _, ptr := range pg.ptrs {
-		rec := Record{}
-		rec.fromBytes(bytes[ptr:])
+		rec := Record{}.fromBytes(bytes[ptr:]).(Record)
 		pg.cells = append(pg.cells, rec)
 	}
 	return pg
@@ -69,7 +68,7 @@ func newNonLeafPage() Page {
 	pg := Page{}
 	pg.header = PageHeader{isLeaf: false, numOfPtr: 0}
 	pg.ptrs = make([]uint32, 0)
-	pg.cells = make([]Record, 0)
+	pg.cells = make([]Cell, 0)
 	return pg
 }
 

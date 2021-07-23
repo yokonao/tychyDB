@@ -126,7 +126,7 @@ func (t *Table) selectInt(col Column) (res []int32, err error) {
 		}
 		numOfPtr := pg.header.numOfPtr
 		for i := 0; uint32(i) < numOfPtr; i++ {
-			rec := pg.cells[i]
+			rec := pg.cells[i].(Record)
 			bytes := rec.data[col.pos : col.pos+col.ty.size]
 			res = append(res, int32(binary.BigEndian.Uint32(bytes)))
 		}
