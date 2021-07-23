@@ -57,7 +57,6 @@ func (t *Table) Read() {
 
 		t.pages = append(t.pages, pg)
 	}
-	fmt.Println(t.pages)
 }
 
 func (t *Table) AddColumn(name string) {
@@ -124,7 +123,8 @@ func (t *Table) selectInt(col Column) (res []int32, err error) {
 	}
 	root := t.pages[0]
 	for i := 0; i < int(root.header.numOfPtr); i++ {
-		keyCell := root.cells[i].(KeyCell)
+		idx := ((PageSize - root.ptrs[i]) / KeyCellSize) - 1
+		keyCell := root.cells[idx].(KeyCell)
 		rec := t.pages[keyCell.pageIndex].cells[keyCell.ptrIndex].(Record)
 		bytes := rec.data[col.pos : col.pos+col.ty.size]
 		res = append(res, int32(binary.BigEndian.Uint32(bytes)))

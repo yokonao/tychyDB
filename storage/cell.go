@@ -35,6 +35,8 @@ func (rec Record) getKey() int32{
 	return int32(binary.BigEndian.Uint32(rec.data[:4]))
 }
 
+const KeyCellSize = 12
+
 type KeyCell struct {
 	key       int32
 	pageIndex uint32
@@ -42,7 +44,7 @@ type KeyCell struct {
 }
 
 func (cell KeyCell) getSize() uint32 {
-	return 12
+	return KeyCellSize
 }
 
 func (cell KeyCell) toBytes() []byte {

@@ -56,14 +56,29 @@ func newPageFromBytes(bytes []byte) Page {
 	pg := Page{}
 	pg.header = newPageHeaderFromBytes(bytes[:5])
 	pg.setPtrsFromBytes(pg.header.numOfPtr, bytes[5:5+4*pg.header.numOfPtr])
+	min := uint32(PageSize)
 	for _, ptr := range pg.ptrs {
+		if ptr < uint32(min) {
+			min = ptr
+		}
+		// var cell Cell
+		// if pg.header.isLeaf {
+		// 	cell = Record{}.fromBytes(bytes[ptr:])
+		// } else {
+		// 	cell = KeyCell{}.fromBytes(bytes[ptr:])
+		// }
+		// pg.cells = append(pg.cells, cell)
+	}
+	cur := min
+	for i := 0; i < int(pg.header.numOfPtr); i++ {
 		var cell Cell
 		if pg.header.isLeaf {
-			cell = Record{}.fromBytes(bytes[ptr:])
+			cell = Record{}.fromBytes(bytes[cur:])
 		} else {
-			cell = KeyCell{}.fromBytes(bytes[ptr:])
+			cell = KeyCell{}.fromBytes(bytes[cur:])
 		}
 		pg.cells = append(pg.cells, cell)
+		cur += cell.getSize()
 	}
 	return pg
 }
@@ -113,6 +128,18 @@ func (pg *Page) addRecord(rec Record) (bool, uint32) {
 	return true, pg.header.numOfPtr - 1
 }
 
+func (pg *Page) locateLocally(key int32) (res uint32) {
+	res = pg.header.numOfPtr
+	for i, ptr := range pg.ptrs {
+		idx := ((PageSize - ptr) / KeyCellSize) - 1
+		compared := pg.cells[idx].(KeyCell).key
+		if key < compared {
+			return uint32(i)
+		}
+	}
+	return
+}
+
 func (pg *Page) addKeyCell(cell KeyCell) {
 	if pg.header.isLeaf {
 		panic(errors.New("cannot add KeyCell to Leaf Page"))
@@ -120,10 +147,12 @@ func (pg *Page) addKeyCell(cell KeyCell) {
 	if pg.headerSize()+4*(pg.header.numOfPtr+1) > PageSize-pg.getContentSize()-cell.getSize() {
 		panic(errors.New("full root page"))
 	}
-	pg.header.numOfPtr++
-
-	pg.ptrs = append(pg.ptrs, uint32(PageSize-pg.getContentSize()-cell.getSize()))
+	idx := pg.locateLocally(cell.key)
+	pg.ptrs = append(pg.ptrs, 0)
+	copy(pg.ptrs[idx+1:], pg.ptrs[idx:])
+	pg.ptrs[idx] = uint32(PageSize - pg.getContentSize() - cell.getSize())
 	pg.cells = append(pg.cells, cell)
+	pg.header.numOfPtr++
 }
 
 func (pg *Page) toBytes() []byte {
@@ -131,7 +160,12 @@ func (pg *Page) toBytes() []byte {
 	copy(buf[:5], pg.header.toBytes())
 	for i, ptr := range pg.ptrs {
 		binary.BigEndian.PutUint32(buf[5+i*4:5+(i+1)*4], ptr)
-		copy(buf[ptr:ptr+uint32(pg.cells[i].getSize())], pg.cells[i].toBytes())
+		// copy(buf[ptr:ptr+uint32(pg.cells[i].getSize())], pg.cells[i].toBytes())
+	}
+	cur := PageSize
+	for _, cell := range pg.cells {
+		copy(buf[cur-int(cell.getSize()):cur], cell.toBytes())
+		cur = cur - int(cell.getSize())
 	}
 	return buf
 }
