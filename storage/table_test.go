@@ -1,12 +1,17 @@
 package storage_test
 
 import (
+	"os"
 	"testing"
-
 	"github.com/tychyDB/storage"
 )
 
 func TestStorage(t *testing.T) {
+	file, err := os.Create("testfile")
+	if err != nil {
+		panic(err)
+	}
+	file.Close()
 	tb := storage.NewTable()
 	tb.AddColumn("hoge")
 	tb.AddColumn("fuga")
@@ -33,7 +38,7 @@ func TestStorage(t *testing.T) {
 	if res[3][3] != 45 {
 		t.Errorf("expected: 45, actual: %d", res[3][3])
 	}
-	
+
 	tb.Write()
 	tb.Read()
 	res, err = tb.Select("hoge", "fuga", "piyo", "fuga")
