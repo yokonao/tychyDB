@@ -15,8 +15,6 @@ func newFileMgr() *FileMgr {
 }
 
 func (fm *FileMgr) read(blk *BlockId, pg *Page) int {
-	// PageにBlockから読み出す
-
 	file, err := os.Open(blk.fileName)
 	if err != nil {
 		panic(err)
@@ -36,8 +34,6 @@ func (fm *FileMgr) read(blk *BlockId, pg *Page) int {
 }
 
 func (fm *FileMgr) write(blk *BlockId, pg *Page) {
-	// PageをBlockへ書き出す
-
 	file, err := os.Create(blk.fileName)
 	if err != nil {
 		panic(err)
