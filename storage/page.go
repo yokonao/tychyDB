@@ -34,18 +34,11 @@ func newPageHeaderFromBytes(bytes []byte) PageHeader {
 	return PageHeader{isLeaf: isLeaf, numOfPtr: numOfPtr}
 }
 
-func (rec Record) toBytes() []byte {
-	buf := make([]byte, rec.getSize())
-	binary.BigEndian.PutUint32(buf[:4], rec.size)
-	copy(buf[4:], rec.data)
-	return buf
-}
-
 type Page struct {
 	// byte buffer
-	header PageHeader
-	ptrs   []uint32
-	cells  []Record
+	header   PageHeader
+	ptrs     []uint32
+	cells    []Record
 	keyCells []KeyCell
 }
 
@@ -66,8 +59,7 @@ func newPageFromBytes(bytes []byte) Page {
 	pg.setPtrsFromBytes(pg.header.numOfPtr, bytes[5:5+4*pg.header.numOfPtr])
 	for _, ptr := range pg.ptrs {
 		rec := Record{}
-		rec.size = binary.BigEndian.Uint32(bytes[ptr : ptr+4])
-		rec.data = bytes[ptr+4 : ptr+4+rec.size]
+		rec.fromBytes(bytes[ptr:])
 		pg.cells = append(pg.cells, rec)
 	}
 	return pg
