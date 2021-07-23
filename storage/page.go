@@ -34,6 +34,10 @@ func newPageHeaderFromBytes(bytes []byte) PageHeader {
 	return PageHeader{isLeaf: isLeaf, numOfPtr: numOfPtr}
 }
 
+type PageOffsets struct {
+	//　後ろから何バイトに先頭があるか
+	ptrs []uint32
+}
 type Page struct {
 	// byte buffer
 	header PageHeader
@@ -68,7 +72,7 @@ func (pg *Page) headerSize() int {
 	return 5
 }
 
-func (pg *Page) setBytes(bytes []byte) bool {
+func (pg *Page) addRecord(bytes []byte) bool {
 	if !pg.header.isLeaf {
 		return false
 	}
