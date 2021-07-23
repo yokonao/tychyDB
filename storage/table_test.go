@@ -17,9 +17,39 @@ func TestStorage(t *testing.T) {
 	tb.Add(10, 45, -999)
 	tb.Add(-100, 89, 111)
 	tb.Add(-100, 89, 111)
-	tb.Select("hoge", "fuga", "piyo", "fuga")
+	res, err := tb.Select("hoge", "fuga", "piyo", "fuga")
+	if err != nil {
+		t.Error("failure select")
+	}
+	if res[0][0] != 2 {
+		t.Errorf("expected: 2, actual: %d", res[0][0])
+	}
+	if res[1][1] != 4 {
+		t.Errorf("expected: 4, actual: %d", res[1][1])
+	}
+	if res[2][2] != 90 {
+		t.Errorf("expected: 90, actual: %d", res[2][2])
+	}
+	if res[3][3] != 45 {
+		t.Errorf("expected: 45, actual: %d", res[3][3])
+	}
+	
 	tb.Write()
 	tb.Read()
-	tb.Select("hoge", "fuga", "piyo", "fuga")
-
+	res, err = tb.Select("hoge", "fuga", "piyo", "fuga")
+	if err != nil {
+		t.Error("failure select")
+	}
+	if res[0][0] != 2 {
+		t.Errorf("expected: 2, actual: %d", res[0][0])
+	}
+	if res[1][1] != 4 {
+		t.Errorf("expected: 4, actual: %d", res[1][1])
+	}
+	if res[2][2] != 90 {
+		t.Errorf("expected: 90, actual: %d", res[2][2])
+	}
+	if res[3][3] != 45 {
+		t.Errorf("expected: 45, actual: %d", res[3][3])
+	}
 }
