@@ -53,24 +53,11 @@ func (pg *Page) headerSize() int {
 	return 5
 }
 
-func (pg *Page) getPageLength() int {
-	return pg.headerSize() + len(pg.bb)
-}
-
 func (pg *Page) setBytes(bytes []byte) bool {
-	if (pg.getPageLength() + len(bytes)) > PageSize {
+	if (pg.headerSize() + len(pg.bb) + len(bytes)) > PageSize {
 		return false
 	}
 	pg.header.numOfPtr += 1
 	pg.bb = append(pg.bb, bytes...)
 	return true
-}
-
-func (pg *Page) getInt(offset int) uint32 {
-	return binary.BigEndian.Uint32(pg.bb[offset : offset+32]) // 32byte integer
-}
-
-func (pg *Page) setInt(offset int, n uint32) {
-	binary.BigEndian.PutUint32(pg.bb[offset:], n)
-
 }
