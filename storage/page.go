@@ -15,7 +15,7 @@ type PageHeader struct {
 }
 
 func (header PageHeader) toBytes() []byte {
-	buf := make([]byte, 5, 5)
+	buf := make([]byte, 5)
 	if header.isLeaf {
 		buf[0] = 1
 	} else {
@@ -70,7 +70,7 @@ func newPageFromBytes(bytes []byte) Page {
 		panic(errors.New("bytes length must be PageSize"))
 	}
 	pg := Page{}
-	pg.header = newPageHeaderFromBytes(bytes[0:5])
+	pg.header = newPageHeaderFromBytes(bytes[:5])
 	pg.setPtrsFromBytes(pg.header.numOfPtr, bytes[5:5+4*pg.header.numOfPtr])
 	for _, ptr := range pg.ptrs {
 		rec := Record{}

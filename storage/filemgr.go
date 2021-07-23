@@ -15,7 +15,7 @@ func newFileMgr() *FileMgr {
 }
 
 func (fm *FileMgr) write(blk *BlockId, pg *Page) {
-	file, err := os.Create(blk.fileName)
+	file, err := os.OpenFile(blk.fileName, os.O_WRONLY, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -54,17 +54,4 @@ func (fm *FileMgr) read(blk *BlockId) (int, Page) {
 	}
 	pg := newPageFromBytes(buf)
 	return n, pg
-}
-
-func fileExists(fileName string) bool {
-	_, err := os.Stat(fileName)
-	return err == nil
-}
-
-func (fm *FileMgr) getFile(fileName string) *os.File {
-	file, err := os.Create(fileName)
-	if err != nil {
-		panic(err)
-	}
-	return file
 }
