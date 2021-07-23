@@ -6,13 +6,20 @@ import (
 
 const PageSize = 100
 
+type PageHeader struct {
+	// total 5 byte
+	isLeaf bool
+	numPtr int32
+}
 type Page struct {
 	// byte buffer
-	bb []byte
+	header PageHeader
+	bb     []byte
 }
 
 func newPage() Page {
 	pg := Page{}
+	pg.header = PageHeader{isLeaf: true, numPtr: 0}
 	pg.bb = make([]byte, 0, PageSize)
 	return pg
 }
