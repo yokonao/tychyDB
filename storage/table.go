@@ -31,7 +31,6 @@ type Record struct {
 
 type Table struct {
 	cols  []Column
-	data  []Record
 	pages []Page
 }
 
@@ -45,18 +44,6 @@ func NewTable() Table {
 }
 
 func (t *Table) Write() {
-	for _, rec := range t.data {
-		for i := 0; ; i++ {
-			if len(t.pages) <= i {
-				t.pages = append(t.pages, newPage())
-			}
-
-			res := t.pages[i].setBytes(rec.data)
-			if res {
-				break
-			}
-		}
-	}
 	fm := newFileMgr()
 	for i, pg := range t.pages {
 		blk := newBlockId("testfile", int64(i))
@@ -77,16 +64,6 @@ func (t *Table) Read() {
 
 		t.pages = append(t.pages, pg)
 	}
-
-	t.data = make([]Record, 0)
-	sz := int(t.getRecordSize())
-
-	for i := 0; i < len(t.pages); i++ {
-		pg := t.pages[i]
-		for j := 0; j < (PageSize-pg.headerSize())/sz; j++ {
-			t.data = append(t.data, Record{data: pg.bb[j*sz : (j+1)*sz]})
-		}
-	}
 }
 
 func (t *Table) AddColumn(name string) {
@@ -103,8 +80,16 @@ func (t *Table) AddColumn(name string) {
 }
 
 func (t *Table) addRecord(rec Record) {
-	t.data = append(t.data, rec)
-	// fmt.Println(rec.data)
+	for i := 0; ; i++ {
+		if len(t.pages) <= i {
+			t.pages = append(t.pages, newPage())
+		}
+
+		res := t.pages[i].setBytes(rec.data)
+		if res {
+			break
+		}
+	}
 }
 
 func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
@@ -142,9 +127,13 @@ func (t *Table) selectInt(col Column) (res []int32, err error) {
 	if col.ty.name != "int" {
 		return nil, errors.New("you must specify int type column")
 	}
-	for _, rec := range t.data {
-		bytes := rec.data[col.pos : col.pos+col.ty.size]
-		res = append(res, int32(binary.BigEndian.Uint32(bytes)))
+	for _, pg := range t.pages {
+		numOfPtr := pg.header.numOfPtr
+		for i := 0; uint32(i) < numOfPtr; i++ {
+			sz := t.getRecordSize()
+			bytes := pg.bb[sz*uint(i)+col.pos : sz*uint(i)+col.pos+col.ty.size]
+			res = append(res, int32(binary.BigEndian.Uint32(bytes)))
+		}
 	}
 	return
 }
