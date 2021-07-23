@@ -1,4 +1,4 @@
-package main
+package btree
 
 import "fmt"
 
@@ -92,7 +92,8 @@ func (t *BTree) Insert(x int) {
 	}
 }
 
-func (top *Node) Print() {
+func (bt *BTree) Print() {
+	top := bt.top
 	if len(top.keys) == 0 {
 		fmt.Println("Nothing to Print")
 		return
@@ -127,33 +128,4 @@ func (top *Node) Print() {
 	fmt.Print("\n")
 
 	fmt.Println("------------")
-}
-
-func main() {
-	t := NewTree(3)
-	t.Insert(10)
-	t.Insert(20)
-	t.Insert(30)
-	t.Insert(32)
-	t.Insert(11)
-	t.Insert(9)
-
-	t.top.Print()
-	t.Insert(100)
-
-	t.top.Print()
-	t.Insert(103)
-
-	t.top.Print()
-	t.Insert(108)
-
-	t.top.Print()
-	t.Insert(111)
-
-	t.top.Print()
-	t.Insert(150)
-
-	t.top.Print()
-	t.Insert(80)
-	t.top.Print()
 }
