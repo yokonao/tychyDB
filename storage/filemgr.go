@@ -14,6 +14,29 @@ func newFileMgr() *FileMgr {
 	}
 }
 
+func (fm *FileMgr) write(blk *BlockId, pg *Page) {
+	file, err := os.Create(blk.fileName)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	_, err = file.Seek(blk.blockNum*fm.blockSize, 0)
+	if err != nil {
+		panic(err)
+	}
+	// _, err = file.Write(pg.header)
+	_, err = file.Seek(int64(pg.headerSize()), 1)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = file.Write(pg.bb)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func (fm *FileMgr) read(blk *BlockId) (int, Page) {
 	file, err := os.Open(blk.fileName)
 	if err != nil {
@@ -36,29 +59,6 @@ func (fm *FileMgr) read(blk *BlockId) (int, Page) {
 	}
 	pg := newPageFromBytes(buf)
 	return n, pg
-}
-
-func (fm *FileMgr) write(blk *BlockId, pg *Page) {
-	file, err := os.Create(blk.fileName)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-
-	_, err = file.Seek(blk.blockNum*fm.blockSize, 0)
-	if err != nil {
-		panic(err)
-	}
-	// _, err = file.Write(pg.header)
-	_, err = file.Seek(int64(pg.headerSize()), 1)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = file.Write(pg.bb)
-	if err != nil {
-		panic(err)
-	}
 }
 
 func fileExists(fileName string) bool {
