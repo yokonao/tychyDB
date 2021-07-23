@@ -122,16 +122,12 @@ func (t *Table) selectInt(col Column) (res []int32, err error) {
 	if col.ty.name != "int" {
 		return nil, errors.New("you must specify int type column")
 	}
-	for _, pg := range t.pages {
-		if !pg.header.isLeaf {
-			continue
-		}
-		numOfPtr := pg.header.numOfPtr
-		for i := 0; uint32(i) < numOfPtr; i++ {
-			rec := pg.cells[i].(Record)
-			bytes := rec.data[col.pos : col.pos+col.ty.size]
-			res = append(res, int32(binary.BigEndian.Uint32(bytes)))
-		}
+	root := t.pages[0]
+	for i:=0; i < int(root.header.numOfPtr); i++{
+		keyCell := root.cells[i].(KeyCell)
+		rec:=t.pages[keyCell.pageIndex].cells[keyCell.ptrIndex].(Record)
+		bytes := rec.data[col.pos : col.pos+col.ty.size]
+		res = append(res, int32(binary.BigEndian.Uint32(bytes)))
 	}
 	return
 }
