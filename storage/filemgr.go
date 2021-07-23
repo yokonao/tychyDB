@@ -25,12 +25,8 @@ func (fm *FileMgr) write(blk *BlockId, pg *Page) {
 	if err != nil {
 		panic(err)
 	}
-	_, err = file.Write(pg.header.toBytes())
-	if err != nil {
-		panic(err)
-	}
 
-	_, err = file.Write(pg.bb)
+	_, err = file.Write(pg.toBytes())
 	if err != nil {
 		panic(err)
 	}

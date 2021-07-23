@@ -25,18 +25,9 @@ func (c Column) String() string {
 	return fmt.Sprintf("{ type: %s, name: %s }", c.ty, c.name)
 }
 
-type Record struct {
-	data []byte
-}
-
 type Table struct {
 	cols  []Column
 	pages []Page
-}
-
-func (t *Table) getRecordSize() uint {
-	last := t.cols[len(t.cols)-1]
-	return last.pos + last.ty.size
 }
 
 func NewTable() Table {
@@ -87,7 +78,7 @@ func (t *Table) addRecord(rec Record) {
 			t.pages = append(t.pages, newPage())
 		}
 
-		res := t.pages[i].addRecord(rec.data)
+		res := t.pages[i].addRecord(rec)
 		if res {
 			break
 		}
@@ -121,7 +112,7 @@ func (t *Table) Add(args ...interface{}) error {
 	if err != nil {
 		return err
 	}
-	t.addRecord(Record{data: bytes})
+	t.addRecord(Record{size: uint32(len(bytes)), data: bytes})
 	return nil
 }
 
@@ -135,8 +126,8 @@ func (t *Table) selectInt(col Column) (res []int32, err error) {
 		}
 		numOfPtr := pg.header.numOfPtr
 		for i := 0; uint32(i) < numOfPtr; i++ {
-			sz := t.getRecordSize()
-			bytes := pg.bb[sz*uint(i)+col.pos : sz*uint(i)+col.pos+col.ty.size]
+			rec := pg.cells[i]
+			bytes := rec.data[col.pos : col.pos+col.ty.size]
 			res = append(res, int32(binary.BigEndian.Uint32(bytes)))
 		}
 	}
