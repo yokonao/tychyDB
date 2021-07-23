@@ -110,7 +110,7 @@ func (pg *Page) addRecord(rec Record) (bool, uint32) {
 	pg.ptrs = append(pg.ptrs, uint32(PageSize-pg.getContentSize()-rec.getSize()))
 	pg.cells = append(pg.cells, rec)
 
-	return true, pg.header.numOfPtr
+	return true, pg.header.numOfPtr - 1
 }
 
 func (pg *Page) addKeyCell(cell KeyCell) {
