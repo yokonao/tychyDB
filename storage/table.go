@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"os"
 )
 
 type Type struct {
@@ -58,41 +57,25 @@ func (t *Table) Write() {
 			}
 		}
 	}
-	file, err := os.Create("testfile")
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
+	fm := newFileMgr()
 	for i, pg := range t.pages {
-		_, err := file.Seek(int64(i*PageSize), 0)
-		if err != nil {
-			panic(err)
-		}
-		_, err = file.Write(pg.bb)
-		if err != nil {
-			panic(err)
-		}
+		blk := newBlockId("testfile", int64(i))
+		fm.write(blk, &pg)
 	}
 }
 
 func (t *Table) Read() {
-	file, err := os.Open("testfile")
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-	buf := make([]byte, PageSize)
+	fm := newFileMgr()
+
 	t.pages = make([]Page, 0)
 	for i := 0; ; i++ {
-		n, err := file.Read(buf)
+		blk := newBlockId("testfile", int64(i))
+		pg := newPage()
+		n := fm.read(blk, &pg)
 		if n == 0 {
 			break
 		}
-		if err != nil {
-			panic(err)
-		}
-		t.pages = append(t.pages, newPage())
-		t.pages[i].setBytes(buf)
+		t.pages = append(t.pages, pg)
 	}
 
 	t.data = make([]Record, 0)
