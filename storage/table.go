@@ -123,9 +123,9 @@ func (t *Table) selectInt(col Column) (res []int32, err error) {
 		return nil, errors.New("you must specify int type column")
 	}
 	root := t.pages[0]
-	for i:=0; i < int(root.header.numOfPtr); i++{
+	for i := 0; i < int(root.header.numOfPtr); i++ {
 		keyCell := root.cells[i].(KeyCell)
-		rec:=t.pages[keyCell.pageIndex].cells[keyCell.ptrIndex].(Record)
+		rec := t.pages[keyCell.pageIndex].cells[keyCell.ptrIndex].(Record)
 		bytes := rec.data[col.pos : col.pos+col.ty.size]
 		res = append(res, int32(binary.BigEndian.Uint32(bytes)))
 	}
