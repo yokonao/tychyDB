@@ -70,8 +70,7 @@ func (t *Table) Read() {
 	t.pages = make([]Page, 0)
 	for i := 0; ; i++ {
 		blk := newBlockId("testfile", int64(i))
-		pg := newPage()
-		n := fm.read(blk, &pg)
+		n, pg := fm.read(blk)
 		if n == 0 {
 			break
 		}
@@ -82,8 +81,9 @@ func (t *Table) Read() {
 	sz := int(t.getRecordSize())
 
 	for i := 0; i < len(t.pages); i++ {
-		for j := 0; j < PageSize/sz; j++ {
-			t.data = append(t.data, Record{data: t.pages[i].bb[j*sz : (j+1)*sz]})
+		pg := t.pages[i]
+		for j := 0; j < (PageSize-pg.headerSize())/sz; j++ {
+			t.data = append(t.data, Record{data: pg.bb[j*sz : (j+1)*sz]})
 		}
 	}
 }
@@ -116,7 +116,7 @@ func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
 		if col.ty.name == "int" {
 			val := uint32(args[i].(int))
 			buf := make([]byte, col.ty.size)
-			binary.LittleEndian.PutUint32(buf, val)
+			binary.BigEndian.PutUint32(buf, val)
 			bytes = append(bytes, buf...)
 		} else {
 			bytes = nil
@@ -143,7 +143,7 @@ func (t *Table) selectInt(col Column) (res []int32, err error) {
 	}
 	for _, rec := range t.data {
 		bytes := rec.data[col.pos : col.pos+col.ty.size]
-		res = append(res, int32(binary.LittleEndian.Uint32(bytes)))
+		res = append(res, int32(binary.BigEndian.Uint32(bytes)))
 	}
 	return
 }

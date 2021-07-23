@@ -14,23 +14,28 @@ func newFileMgr() *FileMgr {
 	}
 }
 
-func (fm *FileMgr) read(blk *BlockId, pg *Page) int {
+func (fm *FileMgr) read(blk *BlockId) (int, Page) {
 	file, err := os.Open(blk.fileName)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
-	file.Seek(blk.blockNum*fm.blockSize, 0)
+	_, err = file.Seek(blk.blockNum*fm.blockSize, 0)
+
+	if err != nil {
+		panic(err)
+	}
+
 	buf := make([]byte, PageSize)
 	n, err := file.Read(buf)
 	if n == 0 {
-		return n
+		return n, newPage()
 	}
 	if err != nil {
 		panic(err)
 	}
-	pg.setBytes(buf)
-	return n
+	pg := newPageFromBytes(buf)
+	return n, pg
 }
 
 func (fm *FileMgr) write(blk *BlockId, pg *Page) {
@@ -44,6 +49,12 @@ func (fm *FileMgr) write(blk *BlockId, pg *Page) {
 	if err != nil {
 		panic(err)
 	}
+	// _, err = file.Write(pg.header)
+	_, err = file.Seek(int64(pg.headerSize()), 1)
+	if err != nil {
+		panic(err)
+	}
+
 	_, err = file.Write(pg.bb)
 	if err != nil {
 		panic(err)
