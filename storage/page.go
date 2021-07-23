@@ -34,15 +34,6 @@ func newPageHeaderFromBytes(bytes []byte) PageHeader {
 	return PageHeader{isLeaf: isLeaf, numOfPtr: numOfPtr}
 }
 
-type Record struct {
-	size uint32
-	data []byte
-}
-
-func (rec Record) getSize() int {
-	return 4 + len(rec.data)
-}
-
 func (rec Record) toBytes() []byte {
 	buf := make([]byte, rec.getSize())
 	binary.BigEndian.PutUint32(buf[:4], rec.size)
@@ -55,6 +46,7 @@ type Page struct {
 	header PageHeader
 	ptrs   []uint32
 	cells  []Record
+	keyCells []KeyCell
 }
 
 func newPage() Page {
@@ -99,23 +91,23 @@ func (pg *Page) setPtrsFromBytes(numOfPtr uint32, bytes []byte) {
 	}
 }
 
-func (pg *Page) headerSize() int {
+func (pg *Page) headerSize() uint32 {
 	return 5
 }
 
-func (pg *Page) getContentSize() int {
-	size := 0
+func (pg *Page) getContentSize() (size uint32) {
+	size = 0
 	for _, c := range pg.cells {
 		size += c.getSize()
 	}
-	return size
+	return
 }
 
 func (pg *Page) addRecord(rec Record) bool {
 	if !pg.header.isLeaf {
 		return false
 	}
-	if pg.headerSize()+4*(int(pg.header.numOfPtr)+1) > PageSize-pg.getContentSize()-rec.getSize() {
+	if pg.headerSize()+4*(pg.header.numOfPtr+1) > PageSize-pg.getContentSize()-rec.getSize() {
 		return false
 	}
 	pg.header.numOfPtr++
