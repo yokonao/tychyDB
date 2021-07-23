@@ -12,6 +12,18 @@ type PageHeader struct {
 	isLeaf   bool
 	numOfPtr uint32
 }
+
+func (header PageHeader) toBytes() []byte {
+	buf := make([]byte, 5, 5)
+	if header.isLeaf {
+		buf[0] = 1
+	} else {
+		buf[0] = 0
+	}
+	binary.BigEndian.PutUint32(buf[1:5], header.numOfPtr)
+	return buf
+}
+
 type Page struct {
 	// byte buffer
 	header PageHeader

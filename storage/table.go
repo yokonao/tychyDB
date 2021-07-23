@@ -74,6 +74,8 @@ func (t *Table) Read() {
 		if n == 0 {
 			break
 		}
+		fmt.Println(pg.header.numOfPtr)
+
 		t.pages = append(t.pages, pg)
 	}
 

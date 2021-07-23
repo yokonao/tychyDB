@@ -25,11 +25,15 @@ func (fm *FileMgr) write(blk *BlockId, pg *Page) {
 	if err != nil {
 		panic(err)
 	}
-	// _, err = file.Write(pg.header)
-	_, err = file.Seek(int64(pg.headerSize()), 1)
+	_, err = file.Write(pg.header.toBytes())
 	if err != nil {
 		panic(err)
 	}
+
+	//_, err = file.Seek(blk.blockNum*fm.blockSize+int64(pg.headerSize()), 0)
+	//	if err != nil {
+	//	panic(err)
+	//}
 
 	_, err = file.Write(pg.bb)
 	if err != nil {
