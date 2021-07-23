@@ -6,6 +6,7 @@ import (
 )
 
 const PageSize = 100
+const PageHeaderSize = 5
 
 type PageHeader struct {
 	// total 5 byte
@@ -22,6 +23,15 @@ func (header PageHeader) toBytes() []byte {
 	}
 	binary.BigEndian.PutUint32(buf[1:5], header.numOfPtr)
 	return buf
+}
+
+func newPageHeaderFromBytes(bytes []byte) PageHeader {
+	if len(bytes) != PageHeaderSize {
+		panic(errors.New("bytes length must be PageHeaderSize"))
+	}
+	isLeaf := bytes[0] == 0
+	numOfPtr := binary.BigEndian.Uint32(bytes[1:5])
+	return PageHeader{isLeaf: isLeaf, numOfPtr: numOfPtr}
 }
 
 type Page struct {
@@ -41,10 +51,8 @@ func newPageFromBytes(bytes []byte) Page {
 	if len(bytes) != PageSize {
 		panic(errors.New("bytes length must be PageSize"))
 	}
-	isLeaf := bytes[0] == 0
-	numOfPtr := binary.BigEndian.Uint32(bytes[1:5])
 	pg := Page{}
-	pg.header = PageHeader{isLeaf: isLeaf, numOfPtr: numOfPtr}
+	pg.header = newPageHeaderFromBytes(bytes[0:5])
 	pg.bb = bytes[5:]
 	return pg
 }
