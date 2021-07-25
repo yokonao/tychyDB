@@ -61,13 +61,6 @@ func newPageFromBytes(bytes []byte) Page {
 		if ptr < uint32(min) {
 			min = ptr
 		}
-		// var cell Cell
-		// if pg.header.isLeaf {
-		// 	cell = Record{}.fromBytes(bytes[ptr:])
-		// } else {
-		// 	cell = KeyCell{}.fromBytes(bytes[ptr:])
-		// }
-		// pg.cells = append(pg.cells, cell)
 	}
 	cur := min
 	for i := 0; i < int(pg.header.numOfPtr); i++ {
