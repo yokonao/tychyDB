@@ -16,7 +16,7 @@ type PageHeader struct {
 }
 
 func (header PageHeader) toBytes() []byte {
-	buf := make([]byte, 5)
+	buf := make([]byte, PageHeaderSize)
 	if header.isLeaf {
 		buf[0] = 1
 	} else {
@@ -54,7 +54,7 @@ func newPageFromBytes(bytes []byte) Page {
 		panic(errors.New("bytes length must be PageSize"))
 	}
 	pg := Page{}
-	pg.header = newPageHeaderFromBytes(bytes[:5])
+	pg.header = newPageHeaderFromBytes(bytes[:PageHeaderSize])
 	ptrRawValues := make(map[uint32]int, pg.header.numOfPtr)
 	ptrRawValuesSorted := make([]uint32, pg.header.numOfPtr)
 	for i := 0; i < int(pg.header.numOfPtr); i++ {
@@ -135,7 +135,7 @@ func (pg *Page) addKeyCell(cell KeyCell) {
 
 func (pg *Page) toBytes() []byte {
 	buf := make([]byte, PageSize)
-	copy(buf[:5], pg.header.toBytes())
+	copy(buf[:PageHeaderSize], pg.header.toBytes())
 	ptrRawValues := make([]uint32, pg.header.numOfPtr)
 	cur := PageSize
 	for i, cell := range pg.cells {
@@ -145,7 +145,7 @@ func (pg *Page) toBytes() []byte {
 	}
 	for i, ptr := range pg.ptrs {
 		rawValue := ptrRawValues[int(ptr)]
-		binary.BigEndian.PutUint32(buf[5+i*4:5+(i+1)*4], rawValue)
+		binary.BigEndian.PutUint32(buf[PageHeaderSize+i*4:PageHeaderSize+(i+1)*4], rawValue)
 	}
 	return buf
 }
