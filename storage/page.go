@@ -85,16 +85,6 @@ func newNonLeafPage() Page {
 	return pg
 }
 
-func (pg *Page) setPtrsFromBytes(numOfPtr uint32, bytes []byte) {
-	if int(numOfPtr*4) != len(bytes) {
-		panic(errors.New("bytes length must be 4 * numOfPtr"))
-	}
-	pg.ptrs = make([]uint32, numOfPtr)
-	for i := 0; i < int(numOfPtr); i++ {
-		pg.ptrs[i] = binary.BigEndian.Uint32(bytes[i*4 : (i+1)*4])
-	}
-}
-
 func (pg *Page) getContentSize() (size uint32) {
 	size = 0
 	for _, c := range pg.cells {
