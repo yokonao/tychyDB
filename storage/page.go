@@ -58,7 +58,7 @@ func newPageFromBytes(bytes []byte) Page {
 	ptrRawValues := make(map[uint32]int, pg.header.numOfPtr)
 	ptrRawValuesSorted := make([]uint32, pg.header.numOfPtr)
 	for i := 0; i < int(pg.header.numOfPtr); i++ {
-		value := binary.BigEndian.Uint32(bytes[int(pg.headerSize())+i*4 : int(pg.headerSize())+(i+1)*4])
+		value := binary.BigEndian.Uint32(bytes[PageHeaderSize+i*4 : PageHeaderSize+(i+1)*4])
 		ptrRawValues[value] = i
 		ptrRawValuesSorted[i] = value
 	}
@@ -95,10 +95,6 @@ func (pg *Page) setPtrsFromBytes(numOfPtr uint32, bytes []byte) {
 	}
 }
 
-func (pg *Page) headerSize() uint32 {
-	return 5
-}
-
 func (pg *Page) getContentSize() (size uint32) {
 	size = 0
 	for _, c := range pg.cells {
@@ -111,7 +107,7 @@ func (pg *Page) addRecord(rec Record) (bool, uint32) {
 	if !pg.header.isLeaf {
 		return false, 0
 	}
-	if pg.headerSize()+4*(pg.header.numOfPtr+1) > PageSize-pg.getContentSize()-rec.getSize() {
+	if PageHeaderSize+4*(pg.header.numOfPtr+1) > PageSize-pg.getContentSize()-rec.getSize() {
 		return false, 0
 	}
 
@@ -136,7 +132,7 @@ func (pg *Page) addKeyCell(cell KeyCell) {
 	if pg.header.isLeaf {
 		panic(errors.New("cannot add KeyCell to Leaf Page"))
 	}
-	if pg.headerSize()+4*(pg.header.numOfPtr+1) > PageSize-pg.getContentSize()-cell.getSize() {
+	if PageHeaderSize+4*(pg.header.numOfPtr+1) > PageSize-pg.getContentSize()-cell.getSize() {
 		panic(errors.New("full root page"))
 	}
 	idx := pg.locateLocally(cell.key)
