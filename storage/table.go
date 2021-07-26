@@ -123,7 +123,7 @@ func (t *Table) selectInt(col Column) (res []int32, err error) {
 	}
 	root := t.pages[0]
 	for i := 0; i < int(root.header.numOfPtr); i++ {
-		idx := ((PageSize - root.ptrs[i]) / KeyCellSize) - 1
+		idx := root.ptrs[i]
 		keyCell := root.cells[idx].(KeyCell)
 		rec := t.pages[keyCell.pageIndex].cells[keyCell.ptrIndex].(Record)
 		bytes := rec.data[col.pos : col.pos+col.ty.size]
