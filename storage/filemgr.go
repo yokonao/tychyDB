@@ -5,17 +5,23 @@ import (
 )
 
 type FileMgr struct {
+	basePath  string
 	blockSize int64
 }
 
 func newFileMgr() *FileMgr {
+	curDir, err := os.Getwd()
+	if err != nil {
+		panic("failure for getting current director path")
+	}
 	return &FileMgr{
+		basePath:  curDir + "/disk/",
 		blockSize: PageSize,
 	}
 }
 
 func (fm *FileMgr) write(blk *BlockId, pg *Page) {
-	file, err := os.OpenFile(blk.fileName, os.O_WRONLY, 0644)
+	file, err := os.OpenFile(fm.basePath+blk.fileName, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -33,7 +39,7 @@ func (fm *FileMgr) write(blk *BlockId, pg *Page) {
 }
 
 func (fm *FileMgr) read(blk *BlockId) (int, Page) {
-	file, err := os.Open(blk.fileName)
+	file, err := os.Open(fm.basePath + blk.fileName)
 	if err != nil {
 		panic(err)
 	}
