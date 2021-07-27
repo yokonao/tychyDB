@@ -58,7 +58,7 @@ func (t *Table) AddColumn(name string) {
 		last := t.cols[len(t.cols)-1]
 		pos = last.pos + last.ty.size
 	}
-	ty := Type{name: "int", size: 4}
+	ty := intergerType
 	t.cols = append(t.cols, Column{ty: ty, name: name, pos: pos})
 	// fmt.Println(s.cols[len(s.cols)-1])
 }
@@ -84,7 +84,7 @@ func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
 	}
 	bytes = []byte{}
 	for i, col := range cols {
-		if col.ty.name == "int" {
+		if col.ty.id == integerId {
 			val := uint32(args[i].(int))
 			buf := make([]byte, col.ty.size)
 			binary.BigEndian.PutUint32(buf, val)
@@ -109,7 +109,7 @@ func (t *Table) Add(args ...interface{}) error {
 }
 
 func (t *Table) selectInt(col Column) (res []int32, err error) {
-	if col.ty.name != "int" {
+	if col.ty.id != integerId {
 		return nil, errors.New("you must specify int type column")
 	}
 	root := t.pages[0]
@@ -129,7 +129,7 @@ func (t *Table) Select(names ...string) (res [][]int32, err error) {
 			if name != col.name {
 				continue
 			}
-			if col.ty.name == "int" {
+			if col.ty.id == integerId {
 				values, err := t.selectInt(col)
 				if err != nil {
 					return nil, err
