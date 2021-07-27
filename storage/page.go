@@ -49,7 +49,7 @@ func newPage() Page {
 	return pg
 }
 
-type Pair struct {
+type ptrCellPair struct {
 	ptrIndex int
 	cellTop  uint32
 }
@@ -60,14 +60,14 @@ func newPageFromBytes(bytes []byte) Page {
 	}
 	pg := Page{}
 	pg.header = newPageHeaderFromBytes(bytes[:PageHeaderSize])
-	ptrCellPair := make([]Pair, pg.header.numOfPtr)
+	ptrCellPairs := make([]ptrCellPair, pg.header.numOfPtr)
 	for i := 0; i < int(pg.header.numOfPtr); i++ {
 		value := binary.BigEndian.Uint32(bytes[PageHeaderSize+i*4 : PageHeaderSize+(i+1)*4])
-		ptrCellPair[i] = Pair{ptrIndex: i, cellTop: value}
+		ptrCellPairs[i] = ptrCellPair{ptrIndex: i, cellTop: value}
 	}
-	sort.Slice(ptrCellPair, func(i, j int) bool { return ptrCellPair[i].cellTop > ptrCellPair[j].cellTop })
+	sort.Slice(ptrCellPairs, func(i, j int) bool { return ptrCellPairs[i].cellTop > ptrCellPairs[j].cellTop })
 	pg.ptrs = make([]uint32, pg.header.numOfPtr)
-	for i, item := range ptrCellPair {
+	for i, item := range ptrCellPairs {
 		var cell Cell
 		if pg.header.isLeaf {
 			cell = Record{}.fromBytes(bytes[item.cellTop:])
@@ -75,7 +75,7 @@ func newPageFromBytes(bytes []byte) Page {
 			cell = KeyCell{}.fromBytes(bytes[item.cellTop:])
 		}
 		pg.cells = append(pg.cells, cell)
-		pg.ptrs[ptrCellPair[i].ptrIndex] = uint32(i)
+		pg.ptrs[item.ptrIndex] = uint32(i)
 	}
 	return pg
 }
