@@ -6,15 +6,6 @@ import (
 	"fmt"
 )
 
-type Type struct {
-	name string
-	size uint
-}
-
-func (t Type) String() string {
-	return t.name
-}
-
 type Column struct {
 	ty   Type
 	name string
