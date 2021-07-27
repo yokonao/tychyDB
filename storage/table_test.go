@@ -7,11 +7,14 @@ import (
 )
 
 func TestStorage(t *testing.T) {
-	file, err := os.Create("testfile")
-	if err != nil {
-		panic(err)
+	// clean up disk directory
+	curDir, err := os.Getwd()
+	if err != nil{
+		t.Fatal("failure for getting current directory path")
 	}
-	file.Close()
+	diskDir := curDir + "/disk"
+	os.Remove(diskDir + "/testfile")
+
 	tb := storage.NewTable()
 	tb.AddColumn("hoge")
 	tb.AddColumn("fuga")
