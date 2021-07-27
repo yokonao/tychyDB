@@ -9,7 +9,7 @@ import (
 type Column struct {
 	ty   Type
 	name string
-	pos  uint
+	pos  uint32
 }
 
 func (c Column) String() string {
@@ -51,7 +51,7 @@ func (t *Table) Read() {
 }
 
 func (t *Table) AddColumn(name string) {
-	var pos uint
+	var pos uint32
 	if len(t.cols) == 0 {
 		pos = 0
 	} else {

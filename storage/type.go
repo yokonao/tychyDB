@@ -20,7 +20,7 @@ func (id TypeId) String() string {
 
 type Type struct {
 	id   TypeId
-	size uint
+	size uint32
 }
 
 func (t Type) String() string {
@@ -28,3 +28,12 @@ func (t Type) String() string {
 }
 
 var intergerType Type = Type{id: integerId, size: 4}
+
+const maxCharLen = 255
+
+func charType(len uint32) Type {
+	if len > maxCharLen {
+		panic("maximum char size is 255. specify less than that.")
+	}
+	return Type{id: charId, size: 4 * len}
+}
