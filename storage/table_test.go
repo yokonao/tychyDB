@@ -8,14 +8,17 @@ import (
 	"github.com/tychyDB/storage"
 )
 
-func TestStorage(t *testing.T) {
-	// clean up disk directory
+func cleanDisk(t *testing.T) {
 	curDir, err := os.Getwd()
 	if err != nil {
 		t.Fatal("failure for getting current directory path")
 	}
 	diskDir := curDir + "/disk"
 	os.Remove(diskDir + "/testfile")
+}
+
+func TestStorage(t *testing.T) {
+	cleanDisk(t)
 
 	tb := storage.NewTable()
 	tb.AddColumn("hoge", storage.IntergerType)
@@ -66,13 +69,7 @@ func TestStorage(t *testing.T) {
 }
 
 func TestStorageChar(t *testing.T) {
-	// clean up disk directory
-	curDir, err := os.Getwd()
-	if err != nil {
-		t.Fatal("failure for getting current directory path")
-	}
-	diskDir := curDir + "/disk"
-	os.Remove(diskDir + "/testfile")
+	cleanDisk(t)
 
 	countryTable := storage.NewTable()
 	countryTable.AddColumn("name", storage.CharType(6))
@@ -105,7 +102,7 @@ func TestStorageChar(t *testing.T) {
 	if err != nil {
 		t.Error("failure select")
 	}
-	if !strings.HasPrefix(res[0][0].(string), "South America"){
+	if !strings.HasPrefix(res[0][0].(string), "South America") {
 		t.Errorf("expected: South America, actual: %s\n", res[0][0].(string))
 	}
 	if !strings.HasPrefix(res[1][1].(string), "China") {
