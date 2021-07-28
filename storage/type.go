@@ -35,5 +35,5 @@ func CharType(len uint32) Type {
 	if len > maxCharLen {
 		panic("maximum char size is 255. specify less than that.")
 	}
-	return Type{id: charId, size: 4 * len}
+	return Type{id: charId, size: len}
 }
