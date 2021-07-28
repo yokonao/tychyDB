@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 type Column struct {
@@ -88,6 +89,11 @@ func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
 			val := uint32(args[i].(int))
 			buf := make([]byte, col.ty.size)
 			binary.BigEndian.PutUint32(buf, val)
+			bytes = append(bytes, buf...)
+		} else if col.ty.id == charId {
+			rd := strings.NewReader(args[i].(string))
+			buf := make([]byte, col.ty.size)
+			rd.Read(buf)
 			bytes = append(bytes, buf...)
 		} else {
 			bytes = nil
