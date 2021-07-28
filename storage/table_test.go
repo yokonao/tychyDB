@@ -72,8 +72,8 @@ func TestStorageChar(t *testing.T) {
 	cleanDisk(t)
 
 	countryTable := storage.NewTable()
-	countryTable.AddColumn("name", storage.CharType(6))
-	countryTable.AddColumn("continent", storage.CharType(10))
+	countryTable.AddColumn("name", storage.CharType(10))
+	countryTable.AddColumn("continent", storage.CharType(15))
 	countryTable.Add("Japan", "Asia")
 	countryTable.Add("China", "Asia")
 	countryTable.Add("United States", "North America")
