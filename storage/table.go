@@ -180,7 +180,7 @@ func (t *Table) Select(names ...string) (res [][]interface{}, err error) {
 	fmt.Print("\n")
 	for i := 0; i < len(res[0]); i++ {
 		for j := 0; j < len(names); j++ {
-			fmt.Printf("| %d\t", res[j][i])
+			fmt.Printf("| %v\t", res[j][i])
 		}
 		fmt.Print("|")
 		fmt.Print("\n")
