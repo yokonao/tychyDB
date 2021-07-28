@@ -1,11 +1,16 @@
 # tychyDB
 tychy and yokonao challenge to implement relational database
 
-## Testing
+## setup
+Please run the following command for install dependencies.
+```
+make install
+```
+## Command
 ```
 // run all test
-go test -v ./...
+make test
 
-// run specified package test
-got test -v ./parser
+// run linter
+make lint
 ```
