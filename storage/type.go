@@ -27,11 +27,11 @@ func (t Type) String() string {
 	return t.id.String()
 }
 
-var intergerType Type = Type{id: integerId, size: 4}
+var IntergerType Type = Type{id: integerId, size: 4}
 
 const maxCharLen = 255
 
-func charType(len uint32) Type {
+func CharType(len uint32) Type {
 	if len > maxCharLen {
 		panic("maximum char size is 255. specify less than that.")
 	}

@@ -3,22 +3,23 @@ package storage_test
 import (
 	"os"
 	"testing"
+
 	"github.com/tychyDB/storage"
 )
 
 func TestStorage(t *testing.T) {
 	// clean up disk directory
 	curDir, err := os.Getwd()
-	if err != nil{
+	if err != nil {
 		t.Fatal("failure for getting current directory path")
 	}
 	diskDir := curDir + "/disk"
 	os.Remove(diskDir + "/testfile")
 
 	tb := storage.NewTable()
-	tb.AddColumn("hoge")
-	tb.AddColumn("fuga")
-	tb.AddColumn("piyo")
+	tb.AddColumn("hoge", storage.IntergerType)
+	tb.AddColumn("fuga", storage.IntergerType)
+	tb.AddColumn("piyo", storage.IntergerType)
 	tb.Add(2, -13, 89)
 	tb.Add(10000, 4, 44)
 	tb.Add(500, 5, 90)

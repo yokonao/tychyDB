@@ -51,7 +51,7 @@ func (t *Table) Read() {
 	}
 }
 
-func (t *Table) AddColumn(name string) {
+func (t *Table) AddColumn(name string, ty Type) {
 	var pos uint32
 	if len(t.cols) == 0 {
 		pos = 0
@@ -59,7 +59,6 @@ func (t *Table) AddColumn(name string) {
 		last := t.cols[len(t.cols)-1]
 		pos = last.pos + last.ty.size
 	}
-	ty := intergerType
 	t.cols = append(t.cols, Column{ty: ty, name: name, pos: pos})
 	// fmt.Println(s.cols[len(s.cols)-1])
 }
