@@ -108,7 +108,7 @@ func (t *Table) Add(args ...interface{}) error {
 	return nil
 }
 
-func (t *Table) selectInt(col Column) (res []int32, err error) {
+func (t *Table) selectInt(col Column) (res []interface{}, err error) {
 	if col.ty.id != integerId {
 		return nil, errors.New("you must specify int type column")
 	}
@@ -123,7 +123,7 @@ func (t *Table) selectInt(col Column) (res []int32, err error) {
 	return
 }
 
-func (t *Table) Select(names ...string) (res [][]int32, err error) {
+func (t *Table) Select(names ...string) (res [][]interface{}, err error) {
 	for _, name := range names {
 		for _, col := range t.cols {
 			if name != col.name {
@@ -134,6 +134,7 @@ func (t *Table) Select(names ...string) (res [][]int32, err error) {
 				if err != nil {
 					return nil, err
 				}
+
 				res = append(res, values)
 				break
 			} else {
