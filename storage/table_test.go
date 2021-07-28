@@ -63,3 +63,20 @@ func TestStorage(t *testing.T) {
 		t.Errorf("expected: -13, actual: %d", res[3][3])
 	}
 }
+
+func TestStorageChar(t *testing.T) {
+	// clean up disk directory
+	curDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal("failure for getting current directory path")
+	}
+	diskDir := curDir + "/disk"
+	os.Remove(diskDir + "/testfile")
+
+	countryTable := storage.NewTable()
+	countryTable.AddColumn("name", storage.CharType(6))
+	countryTable.AddColumn("continent", storage.CharType(10))
+	countryTable.Add("Japan", "Asia")
+	countryTable.Add("China", "Asia")
+	countryTable.Select("name", "continent")
+}
