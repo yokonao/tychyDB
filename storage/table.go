@@ -129,6 +129,21 @@ func (t *Table) selectInt(col Column) (res []interface{}, err error) {
 	return
 }
 
+func (t *Table) selectChar(col Column) (res []interface{}, err error) {
+	if col.ty.id != charId {
+		return nil, errors.New("you must specify int type column")
+	}
+	root := t.pages[0]
+	for i := 0; i < int(root.header.numOfPtr); i++ {
+		idx := root.ptrs[i]
+		keyCell := root.cells[idx].(KeyCell)
+		rec := t.pages[keyCell.pageIndex].cells[keyCell.ptrIndex].(Record)
+		bytes := rec.data[col.pos : col.pos+col.ty.size]
+		res = append(res, string(bytes))
+	}
+	return
+}
+
 func (t *Table) Select(names ...string) (res [][]interface{}, err error) {
 	for _, name := range names {
 		for _, col := range t.cols {
@@ -140,7 +155,13 @@ func (t *Table) Select(names ...string) (res [][]interface{}, err error) {
 				if err != nil {
 					return nil, err
 				}
-
+				res = append(res, values)
+				break
+			} else if col.ty.id == charId {
+				values, err := t.selectChar(col)
+				if err != nil {
+					return nil, err
+				}
 				res = append(res, values)
 				break
 			} else {
