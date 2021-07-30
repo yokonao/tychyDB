@@ -4,21 +4,13 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"strings"
 )
-
-type Type struct {
-	name string
-	size uint
-}
-
-func (t Type) String() string {
-	return t.name
-}
 
 type Column struct {
 	ty   Type
 	name string
-	pos  uint
+	pos  uint32
 }
 
 func (c Column) String() string {
@@ -59,15 +51,14 @@ func (t *Table) Read() {
 	}
 }
 
-func (t *Table) AddColumn(name string) {
-	var pos uint
+func (t *Table) AddColumn(name string, ty Type) {
+	var pos uint32
 	if len(t.cols) == 0 {
 		pos = 0
 	} else {
 		last := t.cols[len(t.cols)-1]
 		pos = last.pos + last.ty.size
 	}
-	ty := Type{name: "int", size: 4}
 	t.cols = append(t.cols, Column{ty: ty, name: name, pos: pos})
 	// fmt.Println(s.cols[len(s.cols)-1])
 }
@@ -93,10 +84,15 @@ func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
 	}
 	bytes = []byte{}
 	for i, col := range cols {
-		if col.ty.name == "int" {
+		if col.ty.id == integerId {
 			val := uint32(args[i].(int))
 			buf := make([]byte, col.ty.size)
 			binary.BigEndian.PutUint32(buf, val)
+			bytes = append(bytes, buf...)
+		} else if col.ty.id == charId {
+			rd := strings.NewReader(args[i].(string))
+			buf := make([]byte, col.ty.size)
+			rd.Read(buf)
 			bytes = append(bytes, buf...)
 		} else {
 			bytes = nil
@@ -117,8 +113,8 @@ func (t *Table) Add(args ...interface{}) error {
 	return nil
 }
 
-func (t *Table) selectInt(col Column) (res []int32, err error) {
-	if col.ty.name != "int" {
+func (t *Table) selectInt(col Column) (res []interface{}, err error) {
+	if col.ty.id != integerId {
 		return nil, errors.New("you must specify int type column")
 	}
 	root := t.pages[0]
@@ -132,14 +128,36 @@ func (t *Table) selectInt(col Column) (res []int32, err error) {
 	return
 }
 
-func (t *Table) Select(names ...string) (res [][]int32, err error) {
+func (t *Table) selectChar(col Column) (res []interface{}, err error) {
+	if col.ty.id != charId {
+		return nil, errors.New("you must specify int type column")
+	}
+	root := t.pages[0]
+	for i := 0; i < int(root.header.numOfPtr); i++ {
+		idx := root.ptrs[i]
+		keyCell := root.cells[idx].(KeyCell)
+		rec := t.pages[keyCell.pageIndex].cells[keyCell.ptrIndex].(Record)
+		bytes := rec.data[col.pos : col.pos+col.ty.size]
+		res = append(res, string(bytes))
+	}
+	return
+}
+
+func (t *Table) Select(names ...string) (res [][]interface{}, err error) {
 	for _, name := range names {
 		for _, col := range t.cols {
 			if name != col.name {
 				continue
 			}
-			if col.ty.name == "int" {
+			if col.ty.id == integerId {
 				values, err := t.selectInt(col)
+				if err != nil {
+					return nil, err
+				}
+				res = append(res, values)
+				break
+			} else if col.ty.id == charId {
+				values, err := t.selectChar(col)
 				if err != nil {
 					return nil, err
 				}
@@ -162,7 +180,7 @@ func (t *Table) Select(names ...string) (res [][]int32, err error) {
 	fmt.Print("\n")
 	for i := 0; i < len(res[0]); i++ {
 		for j := 0; j < len(names); j++ {
-			fmt.Printf("| %d\t", res[j][i])
+			fmt.Printf("| %v\t", res[j][i])
 		}
 		fmt.Print("|")
 		fmt.Print("\n")
