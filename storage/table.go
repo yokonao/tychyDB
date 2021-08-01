@@ -18,36 +18,31 @@ func (c Column) String() string {
 }
 
 type Table struct {
-	cols  []Column
-	pages []Page
+	bm   BufferMgr
+	fm   FileMgr
+	cols []Column
 }
 
 func NewTable() Table {
 	t := Table{}
-	t.pages = append(t.pages, newNonLeafPage())
+	t.fm = newFileMgr()
+	t.bm = newBufferMgr()
+	t.bm.append(t.fm, newBlockId("testfile", 0), newNonLeafPage())
 	return t
 }
 
 func (t *Table) Write() {
-	fm := newFileMgr()
-	for i, pg := range t.pages {
-		blk := newBlockId("testfile", int64(i))
-		fm.write(blk, &pg)
-	}
+	t.bm.flushAll()
 }
 
 func (t *Table) Read() {
-	fm := newFileMgr()
-
-	t.pages = make([]Page, 0)
 	for i := 0; ; i++ {
 		blk := newBlockId("testfile", int64(i))
-		n, pg := fm.read(blk)
+		n, pg := t.fm.read(blk)
 		if n == 0 {
 			break
 		}
-
-		t.pages = append(t.pages, pg)
+		t.bm.append(t.fm, blk, pg)
 	}
 }
 
@@ -65,13 +60,15 @@ func (t *Table) AddColumn(name string, ty Type) {
 
 func (t *Table) addRecord(rec Record) {
 	for i := 0; ; i++ {
-		if len(t.pages) <= i {
-			t.pages = append(t.pages, newPage())
+		blk := newBlockId("testfile", int64(i))
+		if t.bm.size() <= i {
+			t.bm.append(t.fm, blk, newPage())
 		}
-
-		res, index := t.pages[i].addRecord(rec)
+		res, index := t.bm.addRecord(rec, blk)
 		if res {
-			t.pages[0].addKeyCell(KeyCell{key: rec.getKey(), pageIndex: uint32(i), ptrIndex: index})
+			cell := KeyCell{key: rec.getKey(), pageIndex: uint32(i), ptrIndex: index}
+			rootBlk := newBlockId("testfile", 0)
+			t.bm.addKeyCell(cell, rootBlk)
 			break
 		}
 	}
@@ -117,11 +114,13 @@ func (t *Table) selectInt(col Column) (res []interface{}, err error) {
 	if col.ty.id != integerId {
 		return nil, errors.New("you must specify int type column")
 	}
-	root := t.pages[0]
+	rootBlk := newBlockId("testfile", 0)
+	root := t.bm.getPage(rootBlk)
 	for i := 0; i < int(root.header.numOfPtr); i++ {
 		idx := root.ptrs[i]
 		keyCell := root.cells[idx].(KeyCell)
-		rec := t.pages[keyCell.pageIndex].cells[keyCell.ptrIndex].(Record)
+		blk := newBlockId("testfile", int64(keyCell.pageIndex))
+		rec := t.bm.getPage(blk).cells[keyCell.ptrIndex].(Record)
 		bytes := rec.data[col.pos : col.pos+col.ty.size]
 		res = append(res, int32(binary.BigEndian.Uint32(bytes)))
 	}
@@ -132,11 +131,14 @@ func (t *Table) selectChar(col Column) (res []interface{}, err error) {
 	if col.ty.id != charId {
 		return nil, errors.New("you must specify int type column")
 	}
-	root := t.pages[0]
+	rootBlk := newBlockId("testfile", 0)
+	root := t.bm.getPage(rootBlk)
+
 	for i := 0; i < int(root.header.numOfPtr); i++ {
 		idx := root.ptrs[i]
 		keyCell := root.cells[idx].(KeyCell)
-		rec := t.pages[keyCell.pageIndex].cells[keyCell.ptrIndex].(Record)
+		blk := newBlockId("testfile", int64(keyCell.pageIndex))
+		rec := t.bm.getPage(blk).cells[keyCell.ptrIndex].(Record)
 		bytes := rec.data[col.pos : col.pos+col.ty.size]
 		res = append(res, string(bytes))
 	}
@@ -178,6 +180,7 @@ func (t *Table) Select(names ...string) (res [][]interface{}, err error) {
 	}
 	fmt.Print("|")
 	fmt.Print("\n")
+
 	for i := 0; i < len(res[0]); i++ {
 		for j := 0; j < len(names); j++ {
 			fmt.Printf("| %v\t", res[j][i])
