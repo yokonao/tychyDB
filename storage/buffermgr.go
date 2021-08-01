@@ -1,15 +1,3 @@
-/*
-BufferMgr
-public BufferMgr(FileMgr fm, LogMgr lm, int numbuffs); public Buffer pin(BlockId blk);
-   public void
-  public int
-  public void
-Buffer
-unpin(Buffer buff);
-available();
-flushAll(int txnum);
-*/
-
 package storage
 
 import (
