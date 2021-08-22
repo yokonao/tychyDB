@@ -18,19 +18,23 @@ type Node struct {
 	pointers []interface{}
 }
 
-func newNode() *Node {
+func newNodeLeaf(len int) *Node {
 	node := &Node{}
+	node.isLeaf = true
+	node.keys = make([]int, len)
+	node.pointers = make([]interface{}, len)
+	return node
+}
+
+func newNodeNonLeaf(len int) *Node {
+	node := &Node{}
+	node.isLeaf = false
+	node.keys = make([]int, len)
+	node.pointers = make([]interface{}, len)
 	return node
 }
 
 func (n *Node) locateLocally(key int) int {
-	// keys 1, 3, 5, 7
-	// search key: 2
-	// return 1 because 1 <= 2 < 3
-
-	// search key: 3
-	// return 3 because 3 <= 3 < 5
-
 	for k := range n.keys {
 		if key < n.keys[k] {
 			return k
@@ -39,63 +43,57 @@ func (n *Node) locateLocally(key int) int {
 	return len(n.keys)
 }
 
+func insertInt(index int, item int, arr []int) []int {
+	arr = append(arr, 0)
+	copy(arr[index+1:], arr[index:])
+	arr[index] = item
+	return arr
+}
+
+func insertPtr(index int, ptr interface{}, arr []interface{}) []interface{} {
+	arr = append(arr, nil)
+	copy(arr[index+1:], arr[index:])
+	arr[index] = ptr
+	return arr
+}
+
 func (n *Node) insertRec(key int, value int) (splitted bool, splitKey int, leftNode *Node) {
 	insert_idx := n.locateLocally(key)
 
 	if n.isLeaf {
 		record := &Record{value: value}
-		// keysにinsert recordにinsert
 		if len(n.keys) == 0 {
 			n.keys = append(n.keys, key)
 			n.pointers = append(n.pointers, record)
 		} else {
-
-			n.keys = append(n.keys, 0)
-			copy(n.keys[insert_idx+1:], n.keys[insert_idx:])
-			n.keys[insert_idx] = key
-
-			n.pointers = append(n.pointers, nil)
-			copy(n.pointers[insert_idx+1:], n.pointers[insert_idx:])
-			n.pointers[insert_idx] = record
+			n.keys = insertInt(insert_idx, key, n.keys)
+			n.pointers = insertPtr(insert_idx, record, n.pointers)
 		}
 	} else {
-		target := n.pointers[insert_idx].(*Node)
-		splitted, splitKey, leftNode := target.insertRec(key, value)
+		splitted, splitKey, leftNode := n.pointers[insert_idx].(*Node).insertRec(key, value)
 		if splitted {
-			n.keys = append(n.keys, 0)
-			copy(n.keys[insert_idx+1:], n.keys[insert_idx:])
-			n.keys[insert_idx] = splitKey
-
-			n.pointers = append(n.pointers, nil)
-			copy(n.pointers[insert_idx+1:], n.pointers[insert_idx:])
-			n.pointers[insert_idx] = leftNode
+			n.keys = insertInt(insert_idx, splitKey, n.keys)
+			n.pointers = insertPtr(insert_idx, leftNode, n.pointers)
 		}
 	}
 
 	// 分割
-	if n.isLeaf && len(n.keys) >= MaxDegree {
+	if n.isLeaf && len(n.keys) >= MaxDegree { // leafはn.keyの右端にInfityを含まない
 		splitted = true
 		splitIndex := len(n.keys) / 2
 		splitKey = n.keys[splitIndex]
 		// nodeの分割
-		leftNode = newNode()
-		leftNode.isLeaf = n.isLeaf
-		leftNode.keys = make([]int, splitIndex)
-		leftNode.pointers = make([]interface{}, splitIndex)
+		leftNode = newNodeLeaf(splitIndex)
 		copy(leftNode.keys, n.keys[:splitIndex])
 		copy(leftNode.pointers, n.pointers[:splitIndex])
 		n.keys = n.keys[splitIndex:]
 		n.pointers = n.pointers[splitIndex:]
-		return
-	} else if !n.isLeaf && len(n.keys) > MaxDegree {
+	} else if !n.isLeaf && len(n.keys) > MaxDegree { // 中間ノードはn.keyの右端にInfityを含む
 		splitted = true
 		splitIndex := (len(n.keys) - 1) / 2
 		splitKey = n.keys[splitIndex]
 		// nodeの分割
-		leftNode = newNode()
-		leftNode.isLeaf = n.isLeaf
-		leftNode.keys = make([]int, splitIndex)
-		leftNode.pointers = make([]interface{}, splitIndex)
+		leftNode = newNodeNonLeaf(splitIndex)
 		copy(leftNode.keys, n.keys[:splitIndex])
 		copy(leftNode.pointers, n.pointers[:splitIndex])
 		leftNode.keys = append(leftNode.keys, Infity)
@@ -103,11 +101,10 @@ func (n *Node) insertRec(key int, value int) (splitted bool, splitKey int, leftN
 
 		n.keys = n.keys[splitIndex+1:]
 		n.pointers = n.pointers[splitIndex+1:]
-		return
 	} else {
 		splitted = false
-		return
 	}
+	return
 }
 
 type BPTree struct {
@@ -124,13 +121,10 @@ func (t *BPTree) Insert(key int, value int) {
 		panic(errors.New("key too large"))
 	}
 	if t.top == nil {
-		top := newNode()
-
-		top.isLeaf = false
+		top := newNodeNonLeaf(0)
 		top.keys = append(top.keys, Infity)
 
-		child := newNode()
-		child.isLeaf = true
+		child := newNodeLeaf(0)
 		child.insertRec(key, value)
 
 		top.pointers = append(top.pointers, child)
@@ -140,8 +134,7 @@ func (t *BPTree) Insert(key int, value int) {
 
 	splitted, splitKey, leftNode := t.top.insertRec(key, value)
 	if splitted {
-		top := newNode()
-		top.isLeaf = false
+		top := newNodeNonLeaf(0)
 		top.keys = append(top.keys, splitKey)
 		top.keys = append(top.keys, Infity)
 		top.pointers = append(top.pointers, leftNode)
