@@ -31,7 +31,7 @@ func NewTable() Table {
 func (t *Table) Write() {
 	fm := newFileMgr()
 	for i, pg := range t.pages {
-		blk := newBlockId("testfile", int64(i))
+		blk := newBlockId(int64(i))
 		fm.write(blk, &pg)
 	}
 }
@@ -41,7 +41,7 @@ func (t *Table) Read() {
 
 	t.pages = make([]Page, 0)
 	for i := 0; ; i++ {
-		blk := newBlockId("testfile", int64(i))
+		blk := newBlockId(int64(i))
 		n, pg := fm.read(blk)
 		if n == 0 {
 			break
