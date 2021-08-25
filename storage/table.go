@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+var fm = newFileMgr()
+
 type Column struct {
 	ty   Type
 	name string
@@ -29,7 +31,6 @@ func NewTable() Table {
 }
 
 func (t *Table) Write() {
-	fm := newFileMgr()
 	for i, pg := range t.pages {
 		blk := newBlockId(int64(i))
 		fm.write(blk, &pg)
@@ -37,8 +38,6 @@ func (t *Table) Write() {
 }
 
 func (t *Table) Read() {
-	fm := newFileMgr()
-
 	t.pages = make([]Page, 0)
 	for i := 0; ; i++ {
 		blk := newBlockId(int64(i))
