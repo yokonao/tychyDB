@@ -8,6 +8,7 @@ import (
 )
 
 var fm = newFileMgr()
+var bm = newBufferMgr()
 
 type Column struct {
 	ty   Type
@@ -21,7 +22,7 @@ func (c Column) String() string {
 
 type Table struct {
 	cols  []Column
-	pages []Page
+	pages []*Page
 }
 
 func NewTable() Table {
@@ -33,12 +34,12 @@ func NewTable() Table {
 func (t *Table) Write() {
 	for i, pg := range t.pages {
 		blk := newBlockId(int64(i))
-		fm.write(blk, &pg)
+		fm.write(blk, pg)
 	}
 }
 
 func (t *Table) Read() {
-	t.pages = make([]Page, 0)
+	t.pages = make([]*Page, 0)
 	for i := 0; ; i++ {
 		blk := newBlockId(int64(i))
 		n, pg := fm.read(blk)

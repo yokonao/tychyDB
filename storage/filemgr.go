@@ -38,7 +38,7 @@ func (fm *FileMgr) write(blk *BlockId, pg *Page) {
 	}
 }
 
-func (fm *FileMgr) read(blk *BlockId) (int, Page) {
+func (fm *FileMgr) read(blk *BlockId) (int, *Page) {
 	file, err := os.Open(fm.basePath + "testfile")
 	if err != nil {
 		panic(err)
