@@ -9,6 +9,7 @@ import (
 
 var fm = newFileMgr()
 var bm = newBufferMgr()
+var pgt = newPageTable()
 
 type Column struct {
 	ty   Type
