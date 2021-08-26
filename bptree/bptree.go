@@ -183,8 +183,6 @@ func (t *BPTree) Print() {
 		fmt.Println("Nothing to Print")
 		return
 	}
-	fmt.Printf("infinity is set to %d\n", Infity)
-
 	fmt.Println("------------")
 	j := 0
 	n := 1
