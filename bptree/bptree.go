@@ -43,6 +43,30 @@ func (n *Node) locateLocally(key int) int {
 	return len(n.keys)
 }
 
+func (n *Node) findRec(key int) (find bool, value int) {
+	if n.isLeaf {
+		// binary search
+		l := 0
+		r := len(n.keys)
+		for r-l > 1 {
+			mid := (l + r) / 2
+			if n.keys[mid] <= key {
+				l = mid
+			} else {
+				r = mid
+			}
+		}
+		if n.keys[l] == key {
+			return true, n.pointers[l].(*Record).value
+		}
+		find = false
+		return
+	} else {
+		index := n.locateLocally(key)
+		return n.pointers[index].(*Node).findRec(key)
+	}
+}
+
 func insertInt(index int, item int, arr []int) []int {
 	arr = append(arr, 0)
 	copy(arr[index+1:], arr[index:])
@@ -114,6 +138,16 @@ type BPTree struct {
 func NewBPTree() *BPTree {
 	t := &BPTree{}
 	return t
+}
+func (t *BPTree) Find(key int) (find bool, value int) {
+	if key >= Infity {
+		panic(errors.New("key too large"))
+	}
+	if t.top == nil {
+		find = false
+		return
+	}
+	return t.top.findRec(key)
 }
 
 func (t *BPTree) Insert(key int, value int) {
