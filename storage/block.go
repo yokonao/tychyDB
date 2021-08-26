@@ -5,13 +5,9 @@ type BlockId struct {
 	blockNum int64
 }
 
-func newBlockId(filename string, blockNum int64) BlockId {
-	blk := BlockId{}
+func newBlockId(filename string, blockNum int64) *BlockId {
+	blk := &BlockId{}
 	blk.fileName = filename
 	blk.blockNum = blockNum
 	return blk
-}
-
-func (b BlockId) equal(blk BlockId) bool {
-	return (b.fileName == blk.fileName) && (b.blockNum == blk.blockNum)
 }
