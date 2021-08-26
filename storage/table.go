@@ -36,6 +36,7 @@ func (t *Table) Write() {
 }
 
 func (t *Table) Read() {
+	t.bm.clear()
 	for i := 0; ; i++ {
 		blk := newBlockId("testfile", int64(i))
 		n, pg := t.fm.read(blk)
