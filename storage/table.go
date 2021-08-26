@@ -34,26 +34,26 @@ func NewTable() Table {
 	return t
 }
 
-/*
 func (t *Table) Write() {
-	for i, pg := range t.pages {
-		blk := newBlockId(int64(i))
-		fm.write(blk, pg)
+	for blknum, buffId := range ptb.table {
+		blk := newBlockId(uint32(blknum))
+		fm.write(blk, bm.pool[buffId])
 	}
 }
 
 func (t *Table) Read() {
-	t.pages = make([]*Page, 0)
-	for i := 0; ; i++ {
-		blk := newBlockId(int64(i))
+	for {
+		blk := newUniqueBlockId()
 		n, pg := fm.read(blk)
 		if n == 0 {
 			break
 		}
-		t.pages = append(t.pages, pg)
+		if blk.blockNum == 0 {
+			t.rootBlk = blk
+		}
+		ptb.set(blk, pg)
 	}
 }
-*/
 
 func (t *Table) AddColumn(name string, ty Type) {
 	var pos uint32
@@ -78,7 +78,9 @@ func (t *Table) addRecord(rec Record) {
 
 	blk := newUniqueBlockId()
 	ptb.set(blk, pg)
-	rootPage := bm.pool[ptb.getBuffId(t.rootBlk)]
+	rootBuffId := ptb.getBuffId(t.rootBlk)
+	rootPage := bm.pool[rootBuffId]
+
 	rootPage.addKeyCell(KeyCell{key: rec.getKey(), pageIndex: uint32(blk.blockNum), ptrIndex: index})
 }
 

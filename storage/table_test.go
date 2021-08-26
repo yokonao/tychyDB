@@ -48,8 +48,8 @@ func TestStorage(t *testing.T) {
 		t.Errorf("expected: -13, actual: %d", res[3][3])
 	}
 
-	//tb.Write()
-	//tb.Read()
+	tb.Write()
+	tb.Read()
 	res, err = tb.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
@@ -96,8 +96,8 @@ func TestStorageChar(t *testing.T) {
 		t.Errorf("expected: Nigeria, actual: %s\n", res[0][3].(string))
 	}
 
-	//countryTable.Write()
-	//countryTable.Read()
+	countryTable.Write()
+	countryTable.Read()
 	res, err = countryTable.Select("continent", "name")
 	if err != nil {
 		t.Error("failure select")

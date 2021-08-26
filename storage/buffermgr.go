@@ -1,8 +1,10 @@
 package storage
 
-import "errors"
+import (
+	"errors"
+)
 
-const MaxBufferPoolSize = 1000
+const MaxBufferPoolSize = 5
 
 type PageTable struct {
 	table map[int]int
@@ -19,14 +21,15 @@ func newPageTable() *PageTable {
 func (ptb *PageTable) makeSpace() {
 	if len(ptb.table) > MaxBufferPoolSize {
 		panic(errors.New("unexpected"))
-	} else if len(ptb.table) <= MaxBufferPoolSize {
+	} else if len(ptb.table) < MaxBufferPoolSize {
 		return
 	}
+
 	dropBlk := ptb.queue[0]
 	ptb.queue = ptb.queue[1:]
-	delete(ptb.table, int(dropBlk.blockNum))
 
 	dropBuffId := ptb.table[int(dropBlk.blockNum)]
+	delete(ptb.table, int(dropBlk.blockNum))
 	fm.write(dropBlk, bm.pool[dropBuffId])
 	bm.pool[dropBuffId] = nil
 }
