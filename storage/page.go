@@ -41,12 +41,12 @@ type Page struct {
 	cells  []Cell   // [0]が最初に挿入されたセル
 }
 
-func newPage() Page {
+func newPage() *Page {
 	pg := Page{}
 	pg.header = PageHeader{isLeaf: true, numOfPtr: 0}
 	pg.ptrs = make([]uint32, 0)
 	pg.cells = make([]Cell, 0)
-	return pg
+	return &pg
 }
 
 type ptrCellPair struct {
@@ -54,7 +54,7 @@ type ptrCellPair struct {
 	cellTop  uint32
 }
 
-func newPageFromBytes(bytes []byte) Page {
+func newPageFromBytes(bytes []byte) *Page {
 	if len(bytes) != PageSize {
 		panic(errors.New("bytes length must be PageSize"))
 	}
@@ -77,15 +77,15 @@ func newPageFromBytes(bytes []byte) Page {
 		pg.cells = append(pg.cells, cell)
 		pg.ptrs[item.ptrIndex] = uint32(i)
 	}
-	return pg
+	return &pg
 }
 
-func newNonLeafPage() Page {
+func newNonLeafPage() *Page {
 	pg := Page{}
 	pg.header = PageHeader{isLeaf: false, numOfPtr: 0}
 	pg.ptrs = make([]uint32, 0)
 	pg.cells = make([]Cell, 0)
-	return pg
+	return &pg
 }
 
 func (pg *Page) getContentSize() (size uint32) {

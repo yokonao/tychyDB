@@ -20,14 +20,14 @@ func newFileMgr() *FileMgr {
 	}
 }
 
-func (fm *FileMgr) write(blk *BlockId, pg *Page) {
-	file, err := os.OpenFile(fm.basePath+blk.fileName, os.O_WRONLY|os.O_CREATE, 0644)
+func (fm *FileMgr) write(blk BlockId, pg *Page) {
+	file, err := os.OpenFile(fm.basePath+"testfile", os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
 
-	_, err = file.Seek(blk.blockNum*fm.blockSize, 0)
+	_, err = file.Seek(int64(blk.blockNum)*fm.blockSize, 0)
 	if err != nil {
 		panic(err)
 	}
@@ -38,13 +38,13 @@ func (fm *FileMgr) write(blk *BlockId, pg *Page) {
 	}
 }
 
-func (fm *FileMgr) read(blk *BlockId) (int, Page) {
-	file, err := os.Open(fm.basePath + blk.fileName)
+func (fm *FileMgr) read(blk BlockId) (int, *Page) {
+	file, err := os.Open(fm.basePath + "testfile")
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
-	_, err = file.Seek(blk.blockNum*fm.blockSize, 0)
+	_, err = file.Seek(int64(blk.blockNum)*fm.blockSize, 0)
 
 	if err != nil {
 		panic(err)
