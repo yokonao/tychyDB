@@ -27,7 +27,7 @@ func (fm *FileMgr) write(blk BlockId, pg *Page) {
 	}
 	defer file.Close()
 
-	_, err = file.Seek(blk.blockNum*fm.blockSize, 0)
+	_, err = file.Seek(int64(blk.blockNum)*fm.blockSize, 0)
 	if err != nil {
 		panic(err)
 	}
@@ -44,7 +44,7 @@ func (fm *FileMgr) read(blk BlockId) (int, *Page) {
 		panic(err)
 	}
 	defer file.Close()
-	_, err = file.Seek(blk.blockNum*fm.blockSize, 0)
+	_, err = file.Seek(int64(blk.blockNum)*fm.blockSize, 0)
 
 	if err != nil {
 		panic(err)

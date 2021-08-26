@@ -9,7 +9,7 @@ import (
 
 var fm = newFileMgr()
 var bm = newBufferMgr()
-var pgt = newPageTable()
+var ptb = newPageTable()
 
 type Column struct {
 	ty   Type
@@ -22,16 +22,19 @@ func (c Column) String() string {
 }
 
 type Table struct {
-	cols  []Column
-	pages []*Page
+	cols    []Column
+	rootBlk BlockId
 }
 
 func NewTable() Table {
 	t := Table{}
-	t.pages = append(t.pages, newNonLeafPage())
+	root := newNonLeafPage()
+	t.rootBlk = newUniqueBlockId()
+	ptb.set(t.rootBlk, root)
 	return t
 }
 
+/*
 func (t *Table) Write() {
 	for i, pg := range t.pages {
 		blk := newBlockId(int64(i))
@@ -47,10 +50,10 @@ func (t *Table) Read() {
 		if n == 0 {
 			break
 		}
-
 		t.pages = append(t.pages, pg)
 	}
 }
+*/
 
 func (t *Table) AddColumn(name string, ty Type) {
 	var pos uint32
@@ -65,17 +68,18 @@ func (t *Table) AddColumn(name string, ty Type) {
 }
 
 func (t *Table) addRecord(rec Record) {
-	for i := 0; ; i++ {
-		if len(t.pages) <= i {
-			t.pages = append(t.pages, newPage())
-		}
-
-		res, index := t.pages[i].addRecord(rec)
-		if res {
-			t.pages[0].addKeyCell(KeyCell{key: rec.getKey(), pageIndex: uint32(i), ptrIndex: index})
-			break
-		}
+	// BPTreeにするときに書き直すので手抜き
+	// 1つのページに一つのレコード
+	pg := newPage()
+	res, index := pg.addRecord(rec)
+	if !res {
+		panic(errors.New("addRecord failed"))
 	}
+
+	blk := newUniqueBlockId()
+	ptb.set(blk, pg)
+	rootPage := bm.pool[ptb.getBuffId(t.rootBlk)]
+	rootPage.addKeyCell(KeyCell{key: rec.getKey(), pageIndex: uint32(blk.blockNum), ptrIndex: index})
 }
 
 func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
@@ -118,11 +122,13 @@ func (t *Table) selectInt(col Column) (res []interface{}, err error) {
 	if col.ty.id != integerId {
 		return nil, errors.New("you must specify int type column")
 	}
-	root := t.pages[0]
-	for i := 0; i < int(root.header.numOfPtr); i++ {
-		idx := root.ptrs[i]
-		keyCell := root.cells[idx].(KeyCell)
-		rec := t.pages[keyCell.pageIndex].cells[keyCell.ptrIndex].(Record)
+	rootPage := bm.pool[ptb.getBuffId(t.rootBlk)]
+	for i := 0; i < int(rootPage.header.numOfPtr); i++ {
+		idx := rootPage.ptrs[i]
+		keyCell := rootPage.cells[idx].(KeyCell)
+		blk := newBlockId(keyCell.pageIndex)
+		rec := bm.pool[ptb.getBuffId(blk)].cells[keyCell.ptrIndex].(Record)
+		//rec := t.pages[keyCell.pageIndex].cells[keyCell.ptrIndex].(Record)
 		bytes := rec.data[col.pos : col.pos+col.ty.size]
 		res = append(res, int32(binary.BigEndian.Uint32(bytes)))
 	}
@@ -133,11 +139,12 @@ func (t *Table) selectChar(col Column) (res []interface{}, err error) {
 	if col.ty.id != charId {
 		return nil, errors.New("you must specify int type column")
 	}
-	root := t.pages[0]
-	for i := 0; i < int(root.header.numOfPtr); i++ {
-		idx := root.ptrs[i]
-		keyCell := root.cells[idx].(KeyCell)
-		rec := t.pages[keyCell.pageIndex].cells[keyCell.ptrIndex].(Record)
+	rootPage := bm.pool[ptb.getBuffId(t.rootBlk)]
+	for i := 0; i < int(rootPage.header.numOfPtr); i++ {
+		idx := rootPage.ptrs[i]
+		keyCell := rootPage.cells[idx].(KeyCell)
+		blk := newBlockId(keyCell.pageIndex)
+		rec := bm.pool[ptb.getBuffId(blk)].cells[keyCell.ptrIndex].(Record)
 		bytes := rec.data[col.pos : col.pos+col.ty.size]
 		res = append(res, string(bytes))
 	}

@@ -2,7 +2,7 @@ package storage
 
 import "errors"
 
-const MaxBufferPoolSize = 100
+const MaxBufferPoolSize = 1000
 
 type PageTable struct {
 	table map[int]int
@@ -44,6 +44,13 @@ func (ptb *PageTable) getBuffId(blk BlockId) int {
 	}
 }
 
+func (ptb *PageTable) set(blk BlockId, pg *Page) {
+	ptb.makeSpace()
+	ptb.queue = append(ptb.queue, blk)
+	buffId := bm.allocate(pg)
+	ptb.table[int(blk.blockNum)] = buffId
+}
+
 type BufferMgr struct {
 	pool []*Page
 }
@@ -52,6 +59,16 @@ func newBufferMgr() *BufferMgr {
 	bm := &BufferMgr{}
 	bm.pool = make([]*Page, MaxBufferPoolSize)
 	return bm
+}
+
+func (bm *BufferMgr) allocate(pg *Page) int {
+	for i := 0; i < MaxBufferPoolSize; i++ {
+		if bm.pool[i] == nil {
+			bm.pool[i] = pg
+			return i
+		}
+	}
+	panic(errors.New("no space for page"))
 }
 
 func (bm *BufferMgr) load(blk BlockId) int {
