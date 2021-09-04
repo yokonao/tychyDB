@@ -10,7 +10,6 @@ const PageSize = 4096
 const PageHeaderSize = 5
 
 type PageHeader struct {
-	// total 5 byte
 	isLeaf   bool
 	numOfPtr uint32
 }
@@ -42,11 +41,11 @@ type Page struct {
 }
 
 func newPage() *Page {
-	pg := Page{}
+	pg := &Page{}
 	pg.header = PageHeader{isLeaf: true, numOfPtr: 0}
 	pg.ptrs = make([]uint32, 0)
 	pg.cells = make([]Cell, 0)
-	return &pg
+	return pg
 }
 
 type ptrCellPair struct {
@@ -58,7 +57,7 @@ func newPageFromBytes(bytes []byte) *Page {
 	if len(bytes) != PageSize {
 		panic(errors.New("bytes length must be PageSize"))
 	}
-	pg := Page{}
+	pg := &Page{}
 	pg.header = newPageHeaderFromBytes(bytes[:PageHeaderSize])
 	ptrCellPairs := make([]ptrCellPair, pg.header.numOfPtr)
 	for i := 0; i < int(pg.header.numOfPtr); i++ {
@@ -77,15 +76,15 @@ func newPageFromBytes(bytes []byte) *Page {
 		pg.cells = append(pg.cells, cell)
 		pg.ptrs[item.ptrIndex] = uint32(i)
 	}
-	return &pg
+	return pg
 }
 
 func newNonLeafPage() *Page {
-	pg := Page{}
+	pg := &Page{}
 	pg.header = PageHeader{isLeaf: false, numOfPtr: 0}
 	pg.ptrs = make([]uint32, 0)
 	pg.cells = make([]Cell, 0)
-	return &pg
+	return pg
 }
 
 func (pg *Page) getContentSize() (size uint32) {
