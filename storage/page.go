@@ -95,11 +95,15 @@ func (pg *Page) getContentSize() (size uint32) {
 	return
 }
 
+func (pg *Page) getPageSize() uint32 {
+	return PageHeaderSize + 4*pg.header.numOfPtr + pg.getContentSize()
+}
+
 func (pg *Page) addRecord(rec Record) bool {
 	if !pg.header.isLeaf {
 		return false
 	}
-	if PageHeaderSize+4*(pg.header.numOfPtr+1) > PageSize-pg.getContentSize()-rec.getSize() {
+	if (PageSize - pg.getPageSize()) < (4 + rec.getSize()) {
 		return false
 	}
 
@@ -124,7 +128,8 @@ func (pg *Page) addKeyCell(cell KeyCell) {
 	if pg.header.isLeaf {
 		panic(errors.New("cannot add KeyCell to Leaf Page"))
 	}
-	if PageHeaderSize+4*(pg.header.numOfPtr+1) > PageSize-pg.getContentSize()-cell.getSize() {
+
+	if (PageSize - pg.getPageSize()) < (4 + cell.getSize()) {
 		panic(errors.New("full root page"))
 	}
 	idx := pg.locateLocally(cell.key)
