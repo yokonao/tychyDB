@@ -58,3 +58,26 @@ func (cell KeyCell) fromBytes(bytes []byte) Cell {
 	cell.pageIndex = binary.BigEndian.Uint32(bytes[4:8])
 	return cell
 }
+
+type KeyValueCell struct {
+	key int32
+	rec Record
+}
+
+func (cell KeyValueCell) getSize() uint32 {
+	return cell.rec.getSize() + 4
+}
+
+func (cell KeyValueCell) toBytes() []byte {
+	buf := make([]byte, cell.getSize())
+	binary.BigEndian.PutUint32(buf[:4], uint32(cell.key))
+	copy(buf[4:], cell.rec.toBytes())
+	return buf
+}
+
+func (cell KeyValueCell) fromBytes(bytes []byte) Cell {
+	cell.key = int32(binary.BigEndian.Uint32(bytes[:4]))
+	rec := Record{}
+	cell.rec = rec.fromBytes(bytes[4:]).(Record)
+	return cell
+}
