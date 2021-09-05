@@ -7,11 +7,12 @@ import (
 )
 
 const PageSize = 4096
-const PageHeaderSize = 5
+const PageHeaderSize = 9
 
 type PageHeader struct {
-	isLeaf   bool
-	numOfPtr uint32
+	isLeaf       bool
+	numOfPtr     uint32
+	rightmostPtr uint32
 }
 
 func (header PageHeader) toBytes() []byte {
