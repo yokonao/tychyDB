@@ -71,7 +71,7 @@ func (t *Table) addRecord(rec Record) {
 	// BPTreeにするときに書き直すので手抜き
 	// 1つのページに一つのレコード
 	pg := newPage()
-	res, index := pg.addRecord(rec)
+	res := pg.addRecord(rec)
 	if !res {
 		panic(errors.New("addRecord failed"))
 	}
@@ -81,7 +81,7 @@ func (t *Table) addRecord(rec Record) {
 	rootBuffId := ptb.getBuffId(t.rootBlk)
 	rootPage := bm.pool[rootBuffId]
 
-	rootPage.addKeyCell(KeyCell{key: rec.getKey(), pageIndex: uint32(blk.blockNum), ptrIndex: index})
+	rootPage.addKeyCell(KeyCell{key: rec.getKey(), pageIndex: uint32(blk.blockNum)})
 }
 
 func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
@@ -107,7 +107,6 @@ func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
 			return
 		}
 	}
-
 	return
 }
 
@@ -129,10 +128,12 @@ func (t *Table) selectInt(col Column) (res []interface{}, err error) {
 		idx := rootPage.ptrs[i]
 		keyCell := rootPage.cells[idx].(KeyCell)
 		blk := newBlockId(keyCell.pageIndex)
-		rec := bm.pool[ptb.getBuffId(blk)].cells[keyCell.ptrIndex].(Record)
-		//rec := t.pages[keyCell.pageIndex].cells[keyCell.ptrIndex].(Record)
-		bytes := rec.data[col.pos : col.pos+col.ty.size]
-		res = append(res, int32(binary.BigEndian.Uint32(bytes)))
+		cells := bm.pool[ptb.getBuffId(blk)].cells
+		for k := range cells {
+			rec := cells[k].(Record)
+			bytes := rec.data[col.pos : col.pos+col.ty.size]
+			res = append(res, int32(binary.BigEndian.Uint32(bytes)))
+		}
 	}
 	return
 }
@@ -146,9 +147,12 @@ func (t *Table) selectChar(col Column) (res []interface{}, err error) {
 		idx := rootPage.ptrs[i]
 		keyCell := rootPage.cells[idx].(KeyCell)
 		blk := newBlockId(keyCell.pageIndex)
-		rec := bm.pool[ptb.getBuffId(blk)].cells[keyCell.ptrIndex].(Record)
-		bytes := rec.data[col.pos : col.pos+col.ty.size]
-		res = append(res, string(bytes))
+		cells := bm.pool[ptb.getBuffId(blk)].cells
+		for k := range cells {
+			rec := cells[k].(Record)
+			bytes := rec.data[col.pos : col.pos+col.ty.size]
+			res = append(res, string(bytes))
+		}
 	}
 	return
 }
