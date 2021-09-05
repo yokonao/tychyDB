@@ -99,6 +99,16 @@ func (pg *Page) getPageSize() uint32 {
 	return PageHeaderSize + 4*pg.header.numOfPtr + pg.getContentSize()
 }
 
+func (pg *Page) locateLocally(key int32) uint32 {
+	for i, ptr := range pg.ptrs {
+		compared := pg.cells[ptr].(KeyCell).key
+		if key < compared {
+			return uint32(i)
+		}
+	}
+	return pg.header.numOfPtr
+}
+
 func (pg *Page) addRecord(rec Record) bool {
 	if !pg.header.isLeaf {
 		return false
@@ -111,17 +121,6 @@ func (pg *Page) addRecord(rec Record) bool {
 	pg.cells = append(pg.cells, rec)
 	pg.header.numOfPtr++
 	return true
-}
-
-func (pg *Page) locateLocally(key int32) (res uint32) {
-	res = pg.header.numOfPtr
-	for i, ptr := range pg.ptrs {
-		compared := pg.cells[ptr].(KeyCell).key
-		if key < compared {
-			return uint32(i)
-		}
-	}
-	return
 }
 
 func (pg *Page) addKeyCell(cell KeyCell) {
