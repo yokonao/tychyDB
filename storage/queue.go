@@ -1,6 +1,8 @@
 package storage
 
-import "errors"
+import (
+	"errors"
+)
 
 type Queue struct {
 	b []int
@@ -25,8 +27,10 @@ func (q *Queue) Size() int {
 }
 
 func (q *Queue) Push(x int) {
-	if q.Size() >= len(q.b) {
-		panic(errors.New("queue is full, cannot push"))
+	if q.Size()+1 >= len(q.b) {
+		buff := make([]int, 4*len(q.b))
+		copy(buff[:len(q.b)], q.b)
+		q.b = buff
 	}
 	q.b[q.t] = x
 	q.t = (q.t + 1) % len(q.b)

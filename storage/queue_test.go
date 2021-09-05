@@ -1,6 +1,7 @@
 package storage_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/tychyDB/storage"
@@ -49,6 +50,21 @@ func TestQueue(t *testing.T) {
 	for i := 12; i <= 20; i++ {
 		res = q.Pop()
 		if res != i {
+			t.Errorf("expected: %d, actual: %d", i, res)
+		}
+	}
+
+}
+
+func TestQueueExpand(t *testing.T) {
+	q := storage.NewQueue(16)
+	for i := 0; i < 1030; i++ {
+		q.Push(i)
+	}
+	for i := 0; i < 1030; i++ {
+		res := q.Pop()
+		if res != i {
+			fmt.Printf("%d", res)
 			t.Errorf("expected: %d, actual: %d", i, res)
 		}
 	}
