@@ -155,6 +155,8 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 			pg.header.numOfPtr++
 		}
 	}
+
+	// Fanout(MaxDegree)を超えた時には分割する
 	if pg.header.isLeaf && pg.header.numOfPtr >= MaxDegree {
 		splitted = true
 		splitIndex := pg.header.numOfPtr / 2
@@ -173,6 +175,8 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		pg.ptrs = pg.ptrs[splitIndex:]
 		pg.header.numOfPtr -= splitIndex
 	} else if !pg.header.isLeaf && pg.header.numOfPtr > MaxDegree {
+		// ページがnon leafの時にはrightmost ptrが有効になることによって
+		// 分割の動作と分割条件が異なる
 		splitted = true
 		splitIndex := (pg.header.numOfPtr - 1) / 2
 		splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyCell).key
@@ -186,8 +190,8 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 			leftPage.ptrs[i] = uint32(i)
 			leftPage.cells[i] = pg.cells[pg.ptrs[i]]
 		}
-		leftPage.cells[splitIndex-1] = pg.cells[pg.ptrs[splitIndex-1]]
 		leftPage.header.rightmostPtr = splitIndex - 1
+		leftPage.cells[splitIndex-1] = pg.cells[pg.ptrs[splitIndex-1]]
 		leftPage.header.numOfPtr = splitIndex
 		pg.ptrs = pg.ptrs[splitIndex:]
 		pg.header.numOfPtr -= splitIndex
@@ -203,8 +207,8 @@ func (pg *Page) toBytes() []byte {
 	ptrRawValues := make([]uint32, len(pg.cells))
 	cur := PageSize
 	for i, ptr := range pg.ptrs {
+		// すでに有効でないcellを書き込まないためにptrでループを回す
 		cell := pg.cells[pg.ptrs[i]]
-
 		copy(buf[cur-int(cell.getSize()):cur], cell.toBytes())
 		cur = cur - int(cell.getSize())
 		ptrRawValues[ptr] = uint32(cur)

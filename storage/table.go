@@ -65,7 +65,6 @@ func (t *Table) AddColumn(name string, ty Type) {
 		pos = last.pos + last.ty.size
 	}
 	t.cols = append(t.cols, Column{ty: ty, name: name, pos: pos})
-	// fmt.Println(s.cols[len(s.cols)-1])
 }
 
 func (t *Table) addRecord(rec Record) {
@@ -87,12 +86,11 @@ func (t *Table) addRecord(rec Record) {
 			newRootPage := newNonLeafPage()
 			blk := newUniqueBlockId()
 			ptb.set(blk, newRootPage)
-			newRootPage.cells = append(newRootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: t.rootBlk.blockNum})
 			newRootPage.header.rightmostPtr = 0
-			newRootPage.header.numOfPtr++
 			newRootPage.ptrs = append(newRootPage.ptrs, 1)
+			newRootPage.cells = append(newRootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: t.rootBlk.blockNum})
 			newRootPage.cells = append(newRootPage.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
-			newRootPage.header.numOfPtr++
+			newRootPage.header.numOfPtr += 2
 			t.rootBlk = blk
 		}
 	}
