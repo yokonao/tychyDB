@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -68,20 +69,33 @@ func (t *Table) AddColumn(name string, ty Type) {
 }
 
 func (t *Table) addRecord(rec Record) {
-	// BPTreeにするときに書き直すので手抜き
-	// 1つのページに一つのレコード
-	pg := newPage()
-	res := pg.addRecord(rec)
-	if !res {
-		panic(errors.New("addRecord failed"))
-	}
-
-	blk := newUniqueBlockId()
-	ptb.set(blk, pg)
 	rootBuffId := ptb.getBuffId(t.rootBlk)
 	rootPage := bm.pool[rootBuffId]
-
-	rootPage.addKeyCell(KeyCell{key: rec.getKey(), pageIndex: uint32(blk.blockNum)})
+	if rootPage.header.numOfPtr == 0 {
+		pg := newPage()
+		blk := newUniqueBlockId()
+		ptb.set(blk, pg)
+		rootPage.cells = append(rootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: blk.blockNum})
+		rootPage.header.rightmostPtr = 0
+		rootPage.header.numOfPtr++
+		pg.ptrs = append(pg.ptrs, 0)
+		pg.cells = append(pg.cells, KeyValueCell{key: rec.getKey(), rec: rec})
+		pg.header.numOfPtr++
+	} else {
+		splitted, splitKey, leftPageIndex := rootPage.addRecordRec(rec)
+		if splitted {
+			newRootPage := newNonLeafPage()
+			blk := newUniqueBlockId()
+			ptb.set(blk, newRootPage)
+			newRootPage.cells = append(newRootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: t.rootBlk.blockNum})
+			newRootPage.header.rightmostPtr = 0
+			newRootPage.header.numOfPtr++
+			newRootPage.ptrs = append(newRootPage.ptrs, 1)
+			newRootPage.cells = append(newRootPage.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
+			newRootPage.header.numOfPtr++
+			t.rootBlk = blk
+		}
+	}
 }
 
 func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
@@ -123,36 +137,51 @@ func (t *Table) selectInt(col Column) (res []interface{}, err error) {
 	if col.ty.id != integerId {
 		return nil, errors.New("you must specify int type column")
 	}
-	rootPage := bm.pool[ptb.getBuffId(t.rootBlk)]
-	for i := 0; i < int(rootPage.header.numOfPtr); i++ {
-		idx := rootPage.ptrs[i]
-		keyCell := rootPage.cells[idx].(KeyCell)
-		blk := newBlockId(keyCell.pageIndex)
-		cells := bm.pool[ptb.getBuffId(blk)].cells
-		for k := range cells {
-			rec := cells[k].(Record)
-			bytes := rec.data[col.pos : col.pos+col.ty.size]
-			res = append(res, int32(binary.BigEndian.Uint32(bytes)))
+	pageQueue := NewQueue(64)
+	pageQueue.Push(int(t.rootBlk.blockNum))
+	for !pageQueue.IsEmpty() {
+		curPageIndex := uint32(pageQueue.Pop())
+		curPage := bm.pool[ptb.getBuffId(newBlockId(curPageIndex))]
+		if curPage.header.isLeaf {
+			for _, ptr := range curPage.ptrs {
+				rec := curPage.cells[ptr].(KeyValueCell).rec
+				bytes := rec.data[col.pos : col.pos+col.ty.size]
+				res = append(res, int32(binary.BigEndian.Uint32(bytes)))
+			}
+		} else {
+			for i := 0; i < int(curPage.header.numOfPtr-1); i++ {
+				pageQueue.Push(int(curPage.cells[curPage.ptrs[i]].(KeyCell).pageIndex))
+			}
+			pageQueue.Push(int(curPage.cells[curPage.header.rightmostPtr].(KeyCell).pageIndex))
 		}
 	}
 	return
 }
 
 func (t *Table) selectChar(col Column) (res []interface{}, err error) {
+
 	if col.ty.id != charId {
 		return nil, errors.New("you must specify int type column")
 	}
-	rootPage := bm.pool[ptb.getBuffId(t.rootBlk)]
-	for i := 0; i < int(rootPage.header.numOfPtr); i++ {
-		idx := rootPage.ptrs[i]
-		keyCell := rootPage.cells[idx].(KeyCell)
-		blk := newBlockId(keyCell.pageIndex)
-		cells := bm.pool[ptb.getBuffId(blk)].cells
-		for k := range cells {
-			rec := cells[k].(Record)
-			bytes := rec.data[col.pos : col.pos+col.ty.size]
-			res = append(res, string(bytes))
+	pageQueue := NewQueue(64)
+	pageQueue.Push(int(t.rootBlk.blockNum))
+	for !pageQueue.IsEmpty() {
+		curPageIndex := uint32(pageQueue.Pop())
+		curPage := bm.pool[ptb.getBuffId(newBlockId(curPageIndex))]
+		if curPage.header.isLeaf {
+
+			for _, ptr := range curPage.ptrs {
+				rec := curPage.cells[ptr].(KeyValueCell).rec
+				bytes := rec.data[col.pos : col.pos+col.ty.size]
+				res = append(res, string(bytes))
+			}
+		} else {
+			for i := 0; i < int(curPage.header.numOfPtr-1); i++ {
+				pageQueue.Push(int(curPage.cells[curPage.ptrs[i]].(KeyCell).pageIndex))
+			}
+			pageQueue.Push(int(curPage.cells[curPage.header.rightmostPtr].(KeyCell).pageIndex))
 		}
+
 	}
 	return
 }
@@ -200,4 +229,24 @@ func (t *Table) Select(names ...string) (res [][]interface{}, err error) {
 		fmt.Print("\n")
 	}
 	return res, nil
+}
+
+func (t *Table) Print() {
+	fmt.Println("--- start table print ---")
+	pageQueue := NewQueue(64)
+	pageQueue.Push(int(t.rootBlk.blockNum))
+	for !pageQueue.IsEmpty() {
+		curPageIndex := uint32(pageQueue.Pop())
+		curPage := bm.pool[ptb.getBuffId(newBlockId(curPageIndex))]
+		fmt.Printf("Page Index is %d\n", curPageIndex)
+		curPage.info()
+		if !curPage.header.isLeaf {
+			for i := 0; i < int(curPage.header.numOfPtr-1); i++ {
+				pageQueue.Push(int(curPage.cells[curPage.ptrs[i]].(KeyCell).pageIndex))
+			}
+			pageQueue.Push(int(curPage.cells[curPage.header.rightmostPtr].(KeyCell).pageIndex))
+		}
+
+	}
+
 }

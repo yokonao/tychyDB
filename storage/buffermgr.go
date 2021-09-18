@@ -4,7 +4,7 @@ import (
 	"errors"
 )
 
-const MaxBufferPoolSize = 5
+const MaxBufferPoolSize = 15
 
 type PageTable struct {
 	table map[int]int

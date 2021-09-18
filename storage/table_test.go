@@ -17,6 +17,20 @@ func cleanDisk(t *testing.T) {
 	os.Remove(diskDir + "/testfile")
 }
 
+func TestStorageEasy(t *testing.T) {
+	cleanDisk(t)
+
+	tb := storage.NewTable()
+	tb.AddColumn("hoge", storage.IntergerType)
+	tb.AddColumn("fuga", storage.IntergerType)
+	tb.AddColumn("piyo", storage.IntergerType)
+
+	tb.Add(2, -13, 89)
+	tb.Add(10000, 4, 44)
+	tb.Add(500, 5, 90)
+	tb.Add(10000, 4, 44)
+	tb.Add(-345, 77, 43)
+}
 func TestStorage(t *testing.T) {
 	cleanDisk(t)
 
@@ -31,6 +45,7 @@ func TestStorage(t *testing.T) {
 	tb.Add(-345, 77, 43)
 	tb.Add(-100, 89, 111)
 	tb.Add(0, 0, 0)
+	tb.Add(80000, 10, 0)
 	res, err := tb.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
