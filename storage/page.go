@@ -197,36 +197,6 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 	return
 }
 
-func (pg *Page) addRecord(rec Record) bool {
-	if !pg.header.isLeaf {
-		return false
-	}
-	if (PageSize - pg.getPageSize()) < (4 + rec.getSize()) {
-		return false
-	}
-
-	pg.ptrs = append(pg.ptrs, pg.header.numOfPtr)
-	pg.cells = append(pg.cells, rec)
-	pg.header.numOfPtr++
-	return true
-}
-
-func (pg *Page) addKeyCell(cell KeyCell) {
-	if pg.header.isLeaf {
-		panic(errors.New("cannot add KeyCell to Leaf Page"))
-	}
-
-	if (PageSize - pg.getPageSize()) < (4 + cell.getSize()) {
-		panic(errors.New("full root page"))
-	}
-	idx := pg.locateLocally(cell.key)
-	pg.ptrs = append(pg.ptrs, 0)
-	copy(pg.ptrs[idx+1:], pg.ptrs[idx:])
-	pg.ptrs[idx] = pg.header.numOfPtr
-	pg.cells = append(pg.cells, cell)
-	pg.header.numOfPtr++
-}
-
 func (pg *Page) toBytes() []byte {
 	buf := make([]byte, PageSize)
 	copy(buf[:PageHeaderSize], pg.header.toBytes())
