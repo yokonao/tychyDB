@@ -35,25 +35,8 @@ func NewTable() Table {
 	return t
 }
 
-func (t *Table) Write() {
-	for blknum, buffId := range ptb.table {
-		blk := newBlockId(uint32(blknum))
-		fm.write(blk, bm.pool[buffId].page())
-	}
-}
-
-func (t *Table) Read() {
-	for {
-		blk := newUniqueBlockId()
-		n, pg := fm.read(blk)
-		if n == 0 {
-			break
-		}
-		if blk.blockNum == 0 {
-			t.rootBlk = blk
-		}
-		ptb.set(blk, pg)
-	}
+func (t *Table) Clear() {
+	ptb.clear()
 }
 
 func (t *Table) AddColumn(name string, ty Type) {

@@ -23,6 +23,22 @@ func newPageTable() *PageTable {
 	return ptb
 }
 
+func (ptb *PageTable) clear() {
+	for {
+		if ptb.queue.IsEmpty() {
+			break
+		}
+		curBlkNum := ptb.queue.Pop()
+		curBlk := newBlockId(uint32(curBlkNum))
+		curBuffId := ptb.table[int(curBlkNum)]
+		delete(ptb.table, int(curBlkNum))
+		fm.write(curBlk, bm.pool[curBuffId].content)
+		bm.pool[curBuffId] = nil
+
+	}
+	ptb.numOfPin = 0
+}
+
 func (ptb *PageTable) makeSpace() {
 	if len(ptb.table) > MaxBufferPoolSize {
 		panic(errors.New("unexpected"))
