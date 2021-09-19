@@ -4,7 +4,7 @@ import (
 	"errors"
 )
 
-const MaxBufferPoolSize = 5
+const MaxBufferPoolSize = 15
 
 // The page table keeps track of pages
 // that are currently in memory.
@@ -57,10 +57,15 @@ func (ptb *PageTable) makeSpace() {
 		if dropBuff.pin {
 			ptb.queue.Push(dropBlkNum)
 		} else {
-			delete(ptb.table, int(dropBlkNum))
-			fm.write(dropBlk, bm.pool[dropBuffId].content)
-			bm.pool[dropBuffId] = nil
-			break
+			if dropBuff.ref {
+				dropBuff.ref = false
+				ptb.queue.Push(dropBlkNum)
+			} else {
+				delete(ptb.table, int(dropBlkNum))
+				fm.write(dropBlk, bm.pool[dropBuffId].content)
+				bm.pool[dropBuffId] = nil
+				break
+			}
 		}
 	}
 
@@ -102,6 +107,7 @@ func (ptb *PageTable) read(blk BlockId) *Page {
 func (ptb *PageTable) pin(blk BlockId) *Page {
 	buff := bm.pool[ptb.getBuffId(blk)]
 	buff.pin = true
+	buff.ref = true
 	ptb.numOfPin++
 	return buff.page()
 }
@@ -121,6 +127,7 @@ func (ptb *PageTable) unpin(blk BlockId) {
 
 type Buffer struct {
 	pin     bool
+	ref     bool
 	content *Page
 }
 
@@ -128,6 +135,7 @@ func newBufferFromPage(pg *Page) *Buffer {
 	buff := &Buffer{}
 	buff.content = pg
 	buff.pin = false
+	buff.ref = false
 	return buff
 }
 
