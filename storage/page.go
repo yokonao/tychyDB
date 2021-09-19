@@ -10,6 +10,7 @@ import (
 const PageSize = 4096
 const PageHeaderSize = 9
 const MaxDegree = 3
+const IntSize = 4
 
 type PageHeader struct {
 	isLeaf       bool
@@ -24,7 +25,7 @@ func (header PageHeader) toBytes() []byte {
 	} else {
 		buf[0] = 0
 	}
-	binary.BigEndian.PutUint32(buf[1:5], header.numOfPtr)
+	binary.BigEndian.PutUint32(buf[1:1+IntSize], header.numOfPtr)
 	return buf
 }
 
@@ -64,7 +65,7 @@ func newPageFromBytes(bytes []byte) *Page {
 	pg.header = newPageHeaderFromBytes(bytes[:PageHeaderSize])
 	ptrCellPairs := make([]ptrCellPair, pg.header.numOfPtr)
 	for i := 0; i < int(pg.header.numOfPtr); i++ {
-		value := binary.BigEndian.Uint32(bytes[PageHeaderSize+i*4 : PageHeaderSize+(i+1)*4])
+		value := binary.BigEndian.Uint32(bytes[PageHeaderSize+i*IntSize : PageHeaderSize+(i+1)*IntSize])
 		ptrCellPairs[i] = ptrCellPair{ptrIndex: i, cellTop: value}
 	}
 	sort.Slice(ptrCellPairs, func(i, j int) bool { return ptrCellPairs[i].cellTop > ptrCellPairs[j].cellTop })
@@ -216,7 +217,7 @@ func (pg *Page) toBytes() []byte {
 
 	for i := range pg.ptrs {
 		rawValue := ptrRawValues[int(i)]
-		binary.BigEndian.PutUint32(buf[PageHeaderSize+i*4:PageHeaderSize+(i+1)*4], rawValue)
+		binary.BigEndian.PutUint32(buf[PageHeaderSize+i*IntSize:PageHeaderSize+(i+1)*IntSize], rawValue)
 	}
 
 	return buf
