@@ -32,7 +32,7 @@ func (ptb *PageTable) clear() {
 		curBlk := newBlockId(uint32(curBlkNum))
 		curBuffId := ptb.table[int(curBlkNum)]
 		delete(ptb.table, int(curBlkNum))
-		fm.write(curBlk, bm.pool[curBuffId].content)
+		fm.write(curBlk, bm.pool[curBuffId].page())
 		bm.pool[curBuffId] = nil
 
 	}
@@ -96,14 +96,14 @@ func (ptb *PageTable) set(blk BlockId, pg *Page) {
 }
 
 func (ptb *PageTable) read(blk BlockId) *Page {
-	return bm.pool[ptb.getBuffId(blk)].content
+	return bm.pool[ptb.getBuffId(blk)].page()
 }
 
 func (ptb *PageTable) pin(blk BlockId) *Page {
 	buff := bm.pool[ptb.getBuffId(blk)]
 	buff.pin = true
 	ptb.numOfPin++
-	return buff.content
+	return buff.page()
 }
 
 func (ptb *PageTable) unpin(blk BlockId) {
