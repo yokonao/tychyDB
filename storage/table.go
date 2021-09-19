@@ -68,7 +68,7 @@ func (t *Table) AddColumn(name string, ty Type) {
 }
 
 func (t *Table) addRecord(rec Record) {
-	rootPage := ptb.read(t.rootBlk)
+	rootPage := ptb.pin(t.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		pg := newPage()
 		blk := newUniqueBlockId()
@@ -79,19 +79,23 @@ func (t *Table) addRecord(rec Record) {
 		pg.ptrs = append(pg.ptrs, 0)
 		pg.cells = append(pg.cells, KeyValueCell{key: rec.getKey(), rec: rec})
 		pg.header.numOfPtr++
+		ptb.unpin(t.rootBlk)
 	} else {
 		splitted, splitKey, leftPageIndex := rootPage.addRecordRec(rec)
 		if splitted {
 			newRootPage := newNonLeafPage()
 			blk := newUniqueBlockId()
 			ptb.set(blk, newRootPage)
+			ptb.pin(blk)
 			newRootPage.header.rightmostPtr = 0
 			newRootPage.ptrs = append(newRootPage.ptrs, 1)
 			newRootPage.cells = append(newRootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: t.rootBlk.blockNum})
 			newRootPage.cells = append(newRootPage.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
 			newRootPage.header.numOfPtr += 2
+			ptb.unpin(t.rootBlk)
 			t.rootBlk = blk
 		}
+		ptb.unpin(t.rootBlk)
 	}
 }
 

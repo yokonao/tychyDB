@@ -62,13 +62,29 @@ func (ptb *PageTable) read(blk BlockId) *Page {
 	return bm.pool[ptb.getBuffId(blk)].content
 }
 
+func (ptb *PageTable) pin(blk BlockId) *Page {
+	buff := bm.pool[ptb.getBuffId(blk)]
+	buff.pin = true
+	return buff.content
+}
+
+func (ptb *PageTable) unpin(blk BlockId) {
+	buff := bm.pool[ptb.getBuffId(blk)]
+	if !buff.pin {
+		panic(errors.New("pin is already unpinned"))
+	}
+	buff.pin = false
+}
+
 type Buffer struct {
+	pin     bool
 	content *Page
 }
 
 func newBufferFromPage(pg *Page) *Buffer {
 	buff := &Buffer{}
 	buff.content = pg
+	buff.pin = false
 	return buff
 }
 
