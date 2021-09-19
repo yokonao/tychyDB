@@ -145,7 +145,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 			pageIndex = pg.cells[cellIndex].(KeyCell).pageIndex
 		}
 		blk := newBlockId(pageIndex)
-		splitted, splitKey, leftPageIndex := bm.pool[ptb.getBuffId(blk)].addRecordRec(rec)
+		splitted, splitKey, leftPageIndex := ptb.read(blk).addRecordRec(rec)
 		if splitted {
 			if insert_idx == pg.header.numOfPtr {
 				insert_idx--

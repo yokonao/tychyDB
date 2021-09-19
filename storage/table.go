@@ -68,8 +68,7 @@ func (t *Table) AddColumn(name string, ty Type) {
 }
 
 func (t *Table) addRecord(rec Record) {
-	rootBuffId := ptb.getBuffId(t.rootBlk)
-	rootPage := bm.pool[rootBuffId]
+	rootPage := ptb.read(t.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		pg := newPage()
 		blk := newUniqueBlockId()
@@ -139,7 +138,7 @@ func (t *Table) selectInt(col Column) (res []interface{}, err error) {
 	pageQueue.Push(int(t.rootBlk.blockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := bm.pool[ptb.getBuffId(newBlockId(curPageIndex))]
+		curPage := ptb.read(newBlockId(curPageIndex))
 		if curPage.header.isLeaf {
 			for _, ptr := range curPage.ptrs {
 				rec := curPage.cells[ptr].(KeyValueCell).rec
@@ -165,7 +164,7 @@ func (t *Table) selectChar(col Column) (res []interface{}, err error) {
 	pageQueue.Push(int(t.rootBlk.blockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := bm.pool[ptb.getBuffId(newBlockId(curPageIndex))]
+		curPage := ptb.read(newBlockId(curPageIndex))
 		if curPage.header.isLeaf {
 
 			for _, ptr := range curPage.ptrs {
@@ -235,7 +234,7 @@ func (t *Table) Print() {
 	pageQueue.Push(int(t.rootBlk.blockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := bm.pool[ptb.getBuffId(newBlockId(curPageIndex))]
+		curPage := ptb.read(newBlockId(curPageIndex))
 		fmt.Printf("Page Index is %d\n", curPageIndex)
 		curPage.info()
 		if !curPage.header.isLeaf {

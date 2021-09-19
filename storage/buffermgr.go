@@ -6,6 +6,9 @@ import (
 
 const MaxBufferPoolSize = 15
 
+// The page table keeps track of pages
+// that are currently in memory.
+// Also maintains additional meta-data per page
 type PageTable struct {
 	table map[int]int
 	queue []BlockId
@@ -52,6 +55,10 @@ func (ptb *PageTable) set(blk BlockId, pg *Page) {
 	ptb.queue = append(ptb.queue, blk)
 	buffId := bm.allocate(pg)
 	ptb.table[int(blk.blockNum)] = buffId
+}
+
+func (ptb *PageTable) read(blk BlockId) *Page {
+	return bm.pool[ptb.getBuffId(blk)]
 }
 
 type BufferMgr struct {
