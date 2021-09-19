@@ -33,7 +33,7 @@ func (ptb *PageTable) makeSpace() {
 
 	dropBuffId := ptb.table[int(dropBlk.blockNum)]
 	delete(ptb.table, int(dropBlk.blockNum))
-	fm.write(dropBlk, bm.pool[dropBuffId])
+	fm.write(dropBlk, bm.pool[dropBuffId].content)
 	bm.pool[dropBuffId] = nil
 }
 
@@ -53,28 +53,43 @@ func (ptb *PageTable) getBuffId(blk BlockId) int {
 func (ptb *PageTable) set(blk BlockId, pg *Page) {
 	ptb.makeSpace()
 	ptb.queue = append(ptb.queue, blk)
-	buffId := bm.allocate(pg)
+	buff := newBufferFromPage(pg)
+	buffId := bm.allocate(buff)
 	ptb.table[int(blk.blockNum)] = buffId
 }
 
 func (ptb *PageTable) read(blk BlockId) *Page {
-	return bm.pool[ptb.getBuffId(blk)]
+	return bm.pool[ptb.getBuffId(blk)].content
+}
+
+type Buffer struct {
+	content *Page
+}
+
+func newBufferFromPage(pg *Page) *Buffer {
+	buff := &Buffer{}
+	buff.content = pg
+	return buff
+}
+
+func (buff *Buffer) page() *Page {
+	return buff.content
 }
 
 type BufferMgr struct {
-	pool []*Page
+	pool []*Buffer
 }
 
 func newBufferMgr() *BufferMgr {
 	bm := &BufferMgr{}
-	bm.pool = make([]*Page, MaxBufferPoolSize)
+	bm.pool = make([]*Buffer, MaxBufferPoolSize)
 	return bm
 }
 
-func (bm *BufferMgr) allocate(pg *Page) int {
+func (bm *BufferMgr) allocate(buff *Buffer) int {
 	for i := 0; i < MaxBufferPoolSize; i++ {
 		if bm.pool[i] == nil {
-			bm.pool[i] = pg
+			bm.pool[i] = buff
 			return i
 		}
 	}
@@ -86,9 +101,10 @@ func (bm *BufferMgr) load(blk BlockId) int {
 	if n == 0 {
 		panic(errors.New("invalid BlockId was selected"))
 	}
+	buff := newBufferFromPage(pg)
 	for i := 0; i < MaxBufferPoolSize; i++ {
 		if bm.pool[i] == nil {
-			bm.pool[i] = pg
+			bm.pool[i] = buff
 			return i
 		}
 	}

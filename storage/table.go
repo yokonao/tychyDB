@@ -38,7 +38,7 @@ func NewTable() Table {
 func (t *Table) Write() {
 	for blknum, buffId := range ptb.table {
 		blk := newBlockId(uint32(blknum))
-		fm.write(blk, bm.pool[buffId])
+		fm.write(blk, bm.pool[buffId].page())
 	}
 }
 
