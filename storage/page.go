@@ -105,18 +105,6 @@ func newNonLeafPage() *Page {
 	return pg
 }
 
-func (pg *Page) getContentSize() (size uint32) {
-	size = 0
-	for _, c := range pg.cells {
-		size += c.getSize()
-	}
-	return
-}
-
-func (pg *Page) getPageSize() uint32 {
-	return PageHeaderSize + 4*pg.header.numOfPtr + pg.getContentSize()
-}
-
 func (pg *Page) locateLocally(key int32) uint32 {
 	for i, ptr := range pg.ptrs {
 		var compared int32
