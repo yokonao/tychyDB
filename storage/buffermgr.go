@@ -4,20 +4,22 @@ import (
 	"errors"
 )
 
-const MaxBufferPoolSize = 15
+const MaxBufferPoolSize = 5
 
 // The page table keeps track of pages
 // that are currently in memory.
 // Also maintains additional meta-data per page
 type PageTable struct {
-	table map[int]int
-	queue []BlockId
+	numOfPin int
+	table    map[int]int
+	queue    Queue
 }
 
 func newPageTable() *PageTable {
 	ptb := &PageTable{}
+	ptb.numOfPin = 0
 	ptb.table = make(map[int]int)
-	ptb.queue = make([]BlockId, 0)
+	ptb.queue = NewQueue(64)
 	return ptb
 }
 
@@ -27,14 +29,25 @@ func (ptb *PageTable) makeSpace() {
 	} else if len(ptb.table) < MaxBufferPoolSize {
 		return
 	}
+	if !ptb.available() {
+		// unpinされるまで待つ実装でいつか置き換える
+		panic(errors.New("unexpected"))
+	}
+	for {
+		dropBlkNum := ptb.queue.Pop()
+		dropBlk := newBlockId(uint32(dropBlkNum))
+		dropBuffId := ptb.table[int(dropBlkNum)]
+		dropBuff := bm.pool[dropBuffId]
+		if dropBuff.pin {
+			ptb.queue.Push(dropBlkNum)
+		} else {
+			delete(ptb.table, int(dropBlkNum))
+			fm.write(dropBlk, bm.pool[dropBuffId].content)
+			bm.pool[dropBuffId] = nil
+			break
+		}
+	}
 
-	dropBlk := ptb.queue[0]
-	ptb.queue = ptb.queue[1:]
-
-	dropBuffId := ptb.table[int(dropBlk.blockNum)]
-	delete(ptb.table, int(dropBlk.blockNum))
-	fm.write(dropBlk, bm.pool[dropBuffId].content)
-	bm.pool[dropBuffId] = nil
 }
 
 func (ptb *PageTable) getBuffId(blk BlockId) int {
@@ -43,16 +56,24 @@ func (ptb *PageTable) getBuffId(blk BlockId) int {
 		return buffId
 	} else {
 		ptb.makeSpace()
-		ptb.queue = append(ptb.queue, blk)
+		ptb.queue.Push(int(blk.blockNum))
 		buffId := bm.load(blk)
 		ptb.table[int(blk.blockNum)] = buffId
 		return buffId
 	}
 }
 
+func (ptb *PageTable) available() bool {
+	if ptb.numOfPin == MaxBufferPoolSize {
+		return false
+	} else {
+		return true
+	}
+}
+
 func (ptb *PageTable) set(blk BlockId, pg *Page) {
 	ptb.makeSpace()
-	ptb.queue = append(ptb.queue, blk)
+	ptb.queue.Push(int(blk.blockNum))
 	buff := newBufferFromPage(pg)
 	buffId := bm.allocate(buff)
 	ptb.table[int(blk.blockNum)] = buffId
@@ -65,15 +86,21 @@ func (ptb *PageTable) read(blk BlockId) *Page {
 func (ptb *PageTable) pin(blk BlockId) *Page {
 	buff := bm.pool[ptb.getBuffId(blk)]
 	buff.pin = true
+	ptb.numOfPin++
 	return buff.content
 }
 
 func (ptb *PageTable) unpin(blk BlockId) {
-	buff := bm.pool[ptb.getBuffId(blk)]
+	buffId, exists := ptb.table[int(blk.blockNum)]
+	if !exists {
+		panic(errors.New("trying to unpin page not on disk"))
+	}
+	buff := bm.pool[buffId]
 	if !buff.pin {
 		panic(errors.New("pin is already unpinned"))
 	}
 	buff.pin = false
+	ptb.numOfPin--
 }
 
 type Buffer struct {
