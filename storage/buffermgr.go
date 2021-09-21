@@ -2,9 +2,10 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 )
 
-const MaxBufferPoolSize = 15
+const MaxBufferPoolSize = 5
 
 // The page table keeps track of pages
 // that are currently in memory.
@@ -50,6 +51,7 @@ func (ptb *PageTable) makeSpace() {
 		panic(errors.New("unexpected"))
 	}
 	for {
+		ptb.Print()
 		dropBlkNum := ptb.queue.Pop()
 		dropBlk := newBlockId(uint32(dropBlkNum))
 		dropBuffId := ptb.table[int(dropBlkNum)]
@@ -68,6 +70,7 @@ func (ptb *PageTable) makeSpace() {
 			}
 		}
 	}
+	ptb.Print()
 
 }
 
@@ -154,6 +157,18 @@ func (buff *Buffer) page() *Page {
 	return buff.content
 }
 
+func (buff *Buffer) Print() {
+	fmt.Printf("Buffer {")
+	fmt.Printf("BlockID %d, ", buff.blk)
+	if buff.pin {
+		fmt.Print("pin, ")
+	} else {
+		fmt.Print("unpin, ")
+	}
+	fmt.Printf("ref {%v}", buff.ref)
+	fmt.Printf("}\n")
+}
+
 type BufferMgr struct {
 	pool []*Buffer
 }
@@ -187,4 +202,19 @@ func (bm *BufferMgr) load(blk BlockId) int {
 		}
 	}
 	panic(errors.New("no space for page"))
+}
+
+func (bm *BufferMgr) Print() {
+	fmt.Printf("Print BufferMgr [\n")
+	for i, p := range bm.pool {
+		if i != 0 {
+			fmt.Printf(", ")
+		}
+		if p == nil {
+			fmt.Printf("nil\n")
+		} else {
+			p.Print()
+		}
+	}
+	fmt.Printf("]\n")
 }
