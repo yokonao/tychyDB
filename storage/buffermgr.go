@@ -50,6 +50,7 @@ func (ptb *PageTable) makeSpace() {
 		// unpinされるまで待つ実装でいつか置き換える
 		panic(errors.New("unexpected"))
 	}
+	fmt.Println("MakeSpace")
 	for {
 		ptb.Print()
 		dropBlkNum := ptb.queue.Pop()
