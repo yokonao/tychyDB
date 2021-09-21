@@ -95,7 +95,7 @@ func (ptb *PageTable) available() bool {
 func (ptb *PageTable) set(blk BlockId, pg *Page) {
 	ptb.makeSpace()
 	ptb.queue.Push(int(blk.blockNum))
-	buff := newBufferFromPage(pg)
+	buff := newBufferFromPage(blk, pg)
 	buffId := bm.allocate(buff)
 	ptb.table[int(blk.blockNum)] = buffId
 }
@@ -125,17 +125,28 @@ func (ptb *PageTable) unpin(blk BlockId) {
 	ptb.numOfPin--
 }
 
+func (ptb *PageTable) Print() {
+	fmt.Println("Page table print")
+	fmt.Printf("ptb %v\n", ptb.table)
+	bm.Print()
+	fmt.Printf("ptb numofpin %d\n", ptb.numOfPin)
+	fmt.Printf("ptb queue ")
+	ptb.queue.Print()
+}
+
 type Buffer struct {
 	pin     bool
 	ref     bool
+	blk     BlockId
 	content *Page
 }
 
-func newBufferFromPage(pg *Page) *Buffer {
+func newBufferFromPage(blk BlockId, pg *Page) *Buffer {
 	buff := &Buffer{}
 	buff.content = pg
 	buff.pin = false
 	buff.ref = false
+	buff.blk = blk
 	return buff
 }
 
@@ -168,7 +179,7 @@ func (bm *BufferMgr) load(blk BlockId) int {
 	if n == 0 {
 		panic(errors.New("invalid BlockId was selected"))
 	}
-	buff := newBufferFromPage(pg)
+	buff := newBufferFromPage(blk, pg)
 	for i := 0; i < MaxBufferPoolSize; i++ {
 		if bm.pool[i] == nil {
 			bm.pool[i] = buff
