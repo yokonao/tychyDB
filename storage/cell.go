@@ -19,20 +19,20 @@ func (rec Record) getSize() uint32 {
 
 func (rec Record) toBytes() []byte {
 	buf := make([]byte, rec.getSize())
-	binary.BigEndian.PutUint32(buf[:4], rec.size)
+	binary.BigEndian.PutUint32(buf[:IntSize], rec.size)
 	copy(buf[4:], rec.data)
 	return buf
 }
 
 func (rec Record) fromBytes(bytes []byte) Cell {
-	rec.size = binary.BigEndian.Uint32(bytes[:4])
-	rec.data = bytes[4 : 4+rec.size]
+	rec.size = binary.BigEndian.Uint32(bytes[:IntSize])
+	rec.data = bytes[IntSize : IntSize+rec.size]
 	return rec
 }
 
 func (rec Record) getKey() int32 {
 	// 暫定的に第1カラムの値をキーとして扱う
-	return int32(binary.BigEndian.Uint32(rec.data[:4]))
+	return int32(binary.BigEndian.Uint32(rec.data[:IntSize]))
 }
 
 const KeyCellSize = 12
@@ -48,14 +48,14 @@ func (cell KeyCell) getSize() uint32 {
 
 func (cell KeyCell) toBytes() []byte {
 	buf := make([]byte, cell.getSize())
-	binary.BigEndian.PutUint32(buf[:4], uint32(cell.key))
-	binary.BigEndian.PutUint32(buf[4:8], cell.pageIndex)
+	binary.BigEndian.PutUint32(buf[:IntSize], uint32(cell.key))
+	binary.BigEndian.PutUint32(buf[IntSize:2*IntSize], cell.pageIndex)
 	return buf
 }
 
 func (cell KeyCell) fromBytes(bytes []byte) Cell {
-	cell.key = int32(binary.BigEndian.Uint32(bytes[:4]))
-	cell.pageIndex = binary.BigEndian.Uint32(bytes[4:8])
+	cell.key = int32(binary.BigEndian.Uint32(bytes[:IntSize]))
+	cell.pageIndex = binary.BigEndian.Uint32(bytes[IntSize : 2*IntSize])
 	return cell
 }
 
@@ -65,19 +65,19 @@ type KeyValueCell struct {
 }
 
 func (cell KeyValueCell) getSize() uint32 {
-	return cell.rec.getSize() + 4
+	return cell.rec.getSize() + IntSize
 }
 
 func (cell KeyValueCell) toBytes() []byte {
 	buf := make([]byte, cell.getSize())
-	binary.BigEndian.PutUint32(buf[:4], uint32(cell.key))
-	copy(buf[4:], cell.rec.toBytes())
+	binary.BigEndian.PutUint32(buf[:IntSize], uint32(cell.key))
+	copy(buf[IntSize:], cell.rec.toBytes())
 	return buf
 }
 
 func (cell KeyValueCell) fromBytes(bytes []byte) Cell {
-	cell.key = int32(binary.BigEndian.Uint32(bytes[:4]))
+	cell.key = int32(binary.BigEndian.Uint32(bytes[:IntSize]))
 	rec := Record{}
-	cell.rec = rec.fromBytes(bytes[4:]).(Record)
+	cell.rec = rec.fromBytes(bytes[IntSize:]).(Record)
 	return cell
 }

@@ -35,25 +35,8 @@ func NewTable() Table {
 	return t
 }
 
-func (t *Table) Write() {
-	for blknum, buffId := range ptb.table {
-		blk := newBlockId(uint32(blknum))
-		fm.write(blk, bm.pool[buffId])
-	}
-}
-
-func (t *Table) Read() {
-	for {
-		blk := newUniqueBlockId()
-		n, pg := fm.read(blk)
-		if n == 0 {
-			break
-		}
-		if blk.blockNum == 0 {
-			t.rootBlk = blk
-		}
-		ptb.set(blk, pg)
-	}
+func (t *Table) Clear() {
+	ptb.clear()
 }
 
 func (t *Table) AddColumn(name string, ty Type) {
@@ -68,8 +51,7 @@ func (t *Table) AddColumn(name string, ty Type) {
 }
 
 func (t *Table) addRecord(rec Record) {
-	rootBuffId := ptb.getBuffId(t.rootBlk)
-	rootPage := bm.pool[rootBuffId]
+	rootPage := ptb.pin(t.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		pg := newPage()
 		blk := newUniqueBlockId()
@@ -80,19 +62,23 @@ func (t *Table) addRecord(rec Record) {
 		pg.ptrs = append(pg.ptrs, 0)
 		pg.cells = append(pg.cells, KeyValueCell{key: rec.getKey(), rec: rec})
 		pg.header.numOfPtr++
+		ptb.unpin(t.rootBlk)
 	} else {
 		splitted, splitKey, leftPageIndex := rootPage.addRecordRec(rec)
 		if splitted {
 			newRootPage := newNonLeafPage()
 			blk := newUniqueBlockId()
 			ptb.set(blk, newRootPage)
+			ptb.pin(blk)
 			newRootPage.header.rightmostPtr = 0
 			newRootPage.ptrs = append(newRootPage.ptrs, 1)
 			newRootPage.cells = append(newRootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: t.rootBlk.blockNum})
 			newRootPage.cells = append(newRootPage.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
 			newRootPage.header.numOfPtr += 2
+			ptb.unpin(t.rootBlk)
 			t.rootBlk = blk
 		}
+		ptb.unpin(t.rootBlk)
 	}
 }
 
@@ -139,7 +125,7 @@ func (t *Table) selectInt(col Column) (res []interface{}, err error) {
 	pageQueue.Push(int(t.rootBlk.blockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := bm.pool[ptb.getBuffId(newBlockId(curPageIndex))]
+		curPage := ptb.read(newBlockId(curPageIndex))
 		if curPage.header.isLeaf {
 			for _, ptr := range curPage.ptrs {
 				rec := curPage.cells[ptr].(KeyValueCell).rec
@@ -165,7 +151,7 @@ func (t *Table) selectChar(col Column) (res []interface{}, err error) {
 	pageQueue.Push(int(t.rootBlk.blockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := bm.pool[ptb.getBuffId(newBlockId(curPageIndex))]
+		curPage := ptb.read(newBlockId(curPageIndex))
 		if curPage.header.isLeaf {
 
 			for _, ptr := range curPage.ptrs {
@@ -235,7 +221,7 @@ func (t *Table) Print() {
 	pageQueue.Push(int(t.rootBlk.blockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := bm.pool[ptb.getBuffId(newBlockId(curPageIndex))]
+		curPage := ptb.read(newBlockId(curPageIndex))
 		fmt.Printf("Page Index is %d\n", curPageIndex)
 		curPage.info()
 		if !curPage.header.isLeaf {

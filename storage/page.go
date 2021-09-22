@@ -4,12 +4,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"sort"
 )
 
 const PageSize = 4096
 const PageHeaderSize = 9
 const MaxDegree = 3
+const IntSize = 4
 
 type PageHeader struct {
 	isLeaf       bool
@@ -24,7 +24,19 @@ func (header PageHeader) toBytes() []byte {
 	} else {
 		buf[0] = 0
 	}
-	binary.BigEndian.PutUint32(buf[1:5], header.numOfPtr)
+	binary.BigEndian.PutUint32(buf[1:1+IntSize], header.numOfPtr)
+	return buf
+}
+
+func (header PageHeader) toBytesNonLeaf(rightmostPtrValue uint32) []byte {
+	buf := make([]byte, PageHeaderSize)
+	if header.isLeaf {
+		buf[0] = 1
+	} else {
+		buf[0] = 0
+	}
+	binary.BigEndian.PutUint32(buf[1:1+IntSize], header.numOfPtr)
+	binary.BigEndian.PutUint32(buf[1+IntSize:1+2*IntSize], rightmostPtrValue)
 	return buf
 }
 
@@ -34,7 +46,9 @@ func newPageHeaderFromBytes(bytes []byte) PageHeader {
 	}
 	isLeaf := bytes[0] == 1
 	numOfPtr := binary.BigEndian.Uint32(bytes[1:5])
-	return PageHeader{isLeaf: isLeaf, numOfPtr: numOfPtr}
+	rightmostPtr := binary.BigEndian.Uint32(bytes[5:9]) // ここで読んだときにはまだディスク上の4096byteのどこからcellが始まるかを示している
+
+	return PageHeader{isLeaf: isLeaf, numOfPtr: numOfPtr, rightmostPtr: rightmostPtr}
 }
 
 type Page struct {
@@ -51,34 +65,35 @@ func newPage() *Page {
 	return pg
 }
 
-type ptrCellPair struct {
-	ptrIndex int
-	cellTop  uint32
-}
-
 func newPageFromBytes(bytes []byte) *Page {
 	if len(bytes) != PageSize {
 		panic(errors.New("bytes length must be PageSize"))
 	}
 	pg := &Page{}
 	pg.header = newPageHeaderFromBytes(bytes[:PageHeaderSize])
-	ptrCellPairs := make([]ptrCellPair, pg.header.numOfPtr)
-	for i := 0; i < int(pg.header.numOfPtr); i++ {
-		value := binary.BigEndian.Uint32(bytes[PageHeaderSize+i*4 : PageHeaderSize+(i+1)*4])
-		ptrCellPairs[i] = ptrCellPair{ptrIndex: i, cellTop: value}
-	}
-	sort.Slice(ptrCellPairs, func(i, j int) bool { return ptrCellPairs[i].cellTop > ptrCellPairs[j].cellTop })
-	pg.ptrs = make([]uint32, pg.header.numOfPtr)
-	for i, item := range ptrCellPairs {
-		var cell Cell
-		if pg.header.isLeaf {
-			cell = Record{}.fromBytes(bytes[item.cellTop:])
-		} else {
-			cell = KeyCell{}.fromBytes(bytes[item.cellTop:])
+
+	if pg.header.isLeaf {
+		pg.ptrs = make([]uint32, pg.header.numOfPtr)
+		for i := 0; i < int(pg.header.numOfPtr); i++ {
+			value := binary.BigEndian.Uint32(bytes[PageHeaderSize+i*IntSize : PageHeaderSize+(i+1)*IntSize])
+			cell := KeyValueCell{}.fromBytes(bytes[value:])
+			pg.ptrs[i] = uint32(i)
+			pg.cells = append(pg.cells, cell)
 		}
-		pg.cells = append(pg.cells, cell)
-		pg.ptrs[item.ptrIndex] = uint32(i)
+
+	} else {
+		pg.ptrs = make([]uint32, pg.header.numOfPtr-1)
+		for i := 0; i < int(pg.header.numOfPtr-1); i++ {
+			value := binary.BigEndian.Uint32(bytes[PageHeaderSize+i*IntSize : PageHeaderSize+(i+1)*IntSize])
+			cell := KeyCell{}.fromBytes(bytes[value:])
+			pg.ptrs[i] = uint32(i)
+			pg.cells = append(pg.cells, cell)
+		}
+		rightmostcell := KeyCell{}.fromBytes(bytes[pg.header.rightmostPtr:])
+		pg.cells = append(pg.cells, rightmostcell)
+		pg.header.rightmostPtr = pg.header.numOfPtr - 1
 	}
+	pg.info()
 	return pg
 }
 
@@ -145,7 +160,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 			pageIndex = pg.cells[cellIndex].(KeyCell).pageIndex
 		}
 		blk := newBlockId(pageIndex)
-		splitted, splitKey, leftPageIndex := bm.pool[ptb.getBuffId(blk)].addRecordRec(rec)
+		splitted, splitKey, leftPageIndex := ptb.pin(blk).addRecordRec(rec)
 		if splitted {
 			if insert_idx == pg.header.numOfPtr {
 				insert_idx--
@@ -154,6 +169,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 			pg.cells = append(pg.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
 			pg.header.numOfPtr++
 		}
+		ptb.unpin(blk)
 	}
 
 	// Fanout(MaxDegree)を超えた時には分割する
@@ -164,6 +180,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		leftPage := newPage()
 		blk := newUniqueBlockId()
 		ptb.set(blk, leftPage)
+		ptb.pin(blk)
 		leftPageIndex = blk.blockNum
 		leftPage.ptrs = make([]uint32, splitIndex)
 		leftPage.cells = make([]Cell, splitIndex)
@@ -174,6 +191,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		leftPage.header.numOfPtr = splitIndex
 		pg.ptrs = pg.ptrs[splitIndex:]
 		pg.header.numOfPtr -= splitIndex
+		ptb.unpin(blk)
 	} else if !pg.header.isLeaf && pg.header.numOfPtr > MaxDegree {
 		// ページがnon leafの時にはrightmost ptrが有効になることによって
 		// 分割の動作と分割条件が異なる
@@ -183,6 +201,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		leftPage := newNonLeafPage()
 		blk := newUniqueBlockId()
 		ptb.set(blk, leftPage)
+		ptb.pin(blk)
 		leftPageIndex = blk.blockNum
 		leftPage.ptrs = make([]uint32, splitIndex-1)
 		leftPage.cells = make([]Cell, splitIndex)
@@ -195,6 +214,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		leftPage.header.numOfPtr = splitIndex
 		pg.ptrs = pg.ptrs[splitIndex:]
 		pg.header.numOfPtr -= splitIndex
+		ptb.unpin(blk)
 	} else {
 		splitted = false
 	}
@@ -203,22 +223,26 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 
 func (pg *Page) toBytes() []byte {
 	buf := make([]byte, PageSize)
-	copy(buf[:PageHeaderSize], pg.header.toBytes())
-	ptrRawValues := make([]uint32, len(pg.cells))
-	cur := PageSize
-	for i, ptr := range pg.ptrs {
-		// すでに有効でないcellを書き込まないためにptrでループを回す
-		cell := pg.cells[pg.ptrs[i]]
-		copy(buf[cur-int(cell.getSize()):cur], cell.toBytes())
-		cur = cur - int(cell.getSize())
-		ptrRawValues[ptr] = uint32(cur)
+	cur := uint32(PageSize)
+	var ptrRawValues []uint32
+	for _, ptr := range pg.ptrs {
+		cell := pg.cells[ptr]
+		copy(buf[cur-cell.getSize():cur], cell.toBytes())
+		cur = cur - cell.getSize()
+		ptrRawValues = append(ptrRawValues, cur)
+	}
+	for i, value := range ptrRawValues {
+		binary.BigEndian.PutUint32(buf[PageHeaderSize+i*IntSize:PageHeaderSize+(i+1)*IntSize], value)
 	}
 
-	for i := range pg.ptrs {
-		rawValue := ptrRawValues[int(i)]
-		binary.BigEndian.PutUint32(buf[PageHeaderSize+i*4:PageHeaderSize+(i+1)*4], rawValue)
+	if pg.header.isLeaf {
+		copy(buf[:PageHeaderSize], pg.header.toBytes())
+	} else {
+		rightmostcell := pg.cells[pg.header.rightmostPtr]
+		copy(buf[cur-rightmostcell.getSize():cur], rightmostcell.toBytes())
+		cur = cur - rightmostcell.getSize()
+		copy(buf[:PageHeaderSize], pg.header.toBytesNonLeaf(cur))
 	}
-
 	return buf
 }
 
