@@ -89,8 +89,8 @@ func newPageFromBytes(bytes []byte) *Page {
 			pg.ptrs[i] = uint32(i)
 			pg.cells = append(pg.cells, cell)
 		}
-		rightmostcell := KeyCell{}.fromBytes(bytes[pg.header.rightmostPtr:])
-		pg.cells = append(pg.cells, rightmostcell)
+		rightmostCell := KeyCell{}.fromBytes(bytes[pg.header.rightmostPtr:])
+		pg.cells = append(pg.cells, rightmostCell)
 		pg.header.rightmostPtr = pg.header.numOfPtr - 1
 	}
 	pg.info()
@@ -103,18 +103,6 @@ func newNonLeafPage() *Page {
 	pg.ptrs = make([]uint32, 0)
 	pg.cells = make([]Cell, 0)
 	return pg
-}
-
-func (pg *Page) getContentSize() (size uint32) {
-	size = 0
-	for _, c := range pg.cells {
-		size += c.getSize()
-	}
-	return
-}
-
-func (pg *Page) getPageSize() uint32 {
-	return PageHeaderSize + 4*pg.header.numOfPtr + pg.getContentSize()
 }
 
 func (pg *Page) locateLocally(key int32) uint32 {
@@ -238,9 +226,9 @@ func (pg *Page) toBytes() []byte {
 	if pg.header.isLeaf {
 		copy(buf[:PageHeaderSize], pg.header.toBytes())
 	} else {
-		rightmostcell := pg.cells[pg.header.rightmostPtr]
-		copy(buf[cur-rightmostcell.getSize():cur], rightmostcell.toBytes())
-		cur = cur - rightmostcell.getSize()
+		rightmostCell := pg.cells[pg.header.rightmostPtr]
+		copy(buf[cur-rightmostCell.getSize():cur], rightmostCell.toBytes())
+		cur = cur - rightmostCell.getSize()
 		copy(buf[:PageHeaderSize], pg.header.toBytesNonLeaf(cur))
 	}
 	return buf
