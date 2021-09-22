@@ -3,16 +3,18 @@ package storage
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"sort"
 )
 
 const PageSize = 4096
-const PageHeaderSize = 5
+const PageHeaderSize = 9
+const MaxDegree = 3
 
 type PageHeader struct {
-	// total 5 byte
-	isLeaf   bool
-	numOfPtr uint32
+	isLeaf       bool
+	numOfPtr     uint32
+	rightmostPtr uint32
 }
 
 func (header PageHeader) toBytes() []byte {
@@ -42,11 +44,11 @@ type Page struct {
 }
 
 func newPage() *Page {
-	pg := Page{}
+	pg := &Page{}
 	pg.header = PageHeader{isLeaf: true, numOfPtr: 0}
 	pg.ptrs = make([]uint32, 0)
 	pg.cells = make([]Cell, 0)
-	return &pg
+	return pg
 }
 
 type ptrCellPair struct {
@@ -58,7 +60,7 @@ func newPageFromBytes(bytes []byte) *Page {
 	if len(bytes) != PageSize {
 		panic(errors.New("bytes length must be PageSize"))
 	}
-	pg := Page{}
+	pg := &Page{}
 	pg.header = newPageHeaderFromBytes(bytes[:PageHeaderSize])
 	ptrCellPairs := make([]ptrCellPair, pg.header.numOfPtr)
 	for i := 0; i < int(pg.header.numOfPtr); i++ {
@@ -77,15 +79,15 @@ func newPageFromBytes(bytes []byte) *Page {
 		pg.cells = append(pg.cells, cell)
 		pg.ptrs[item.ptrIndex] = uint32(i)
 	}
-	return &pg
+	return pg
 }
 
 func newNonLeafPage() *Page {
-	pg := Page{}
+	pg := &Page{}
 	pg.header = PageHeader{isLeaf: false, numOfPtr: 0}
 	pg.ptrs = make([]uint32, 0)
 	pg.cells = make([]Cell, 0)
-	return &pg
+	return pg
 }
 
 func (pg *Page) getContentSize() (size uint32) {
@@ -96,59 +98,135 @@ func (pg *Page) getContentSize() (size uint32) {
 	return
 }
 
-func (pg *Page) addRecord(rec Record) bool {
-	if !pg.header.isLeaf {
-		return false
-	}
-	if PageHeaderSize+4*(pg.header.numOfPtr+1) > PageSize-pg.getContentSize()-rec.getSize() {
-		return false
-	}
-
-	pg.ptrs = append(pg.ptrs, pg.header.numOfPtr)
-	pg.cells = append(pg.cells, rec)
-	pg.header.numOfPtr++
-	return true
+func (pg *Page) getPageSize() uint32 {
+	return PageHeaderSize + 4*pg.header.numOfPtr + pg.getContentSize()
 }
 
-func (pg *Page) locateLocally(key int32) (res uint32) {
-	res = pg.header.numOfPtr
+func (pg *Page) locateLocally(key int32) uint32 {
 	for i, ptr := range pg.ptrs {
-		compared := pg.cells[ptr].(KeyCell).key
+		var compared int32
+		if pg.header.isLeaf {
+			compared = pg.cells[ptr].(KeyValueCell).key
+		} else {
+			compared = pg.cells[ptr].(KeyCell).key
+		}
 		if key < compared {
 			return uint32(i)
 		}
 	}
-	return
+	return pg.header.numOfPtr
+}
+func insertInt(index int, item uint32, arr []uint32) []uint32 {
+	arr = append(arr, 0)
+	copy(arr[index+1:], arr[index:])
+	arr[index] = item
+	return arr
 }
 
-func (pg *Page) addKeyCell(cell KeyCell) {
+func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPageIndex uint32) {
+	key := rec.getKey()
+	insert_idx := pg.locateLocally(key)
 	if pg.header.isLeaf {
-		panic(errors.New("cannot add KeyCell to Leaf Page"))
+		if len(pg.ptrs) == 0 {
+			pg.ptrs = append(pg.ptrs, 0)
+			pg.cells = append(pg.cells, KeyValueCell{key: key, rec: rec})
+			pg.header.numOfPtr++
+		} else {
+			pg.ptrs = insertInt(int(insert_idx), pg.header.numOfPtr, pg.ptrs)
+			pg.cells = append(pg.cells, KeyValueCell{key: key, rec: rec})
+			pg.header.numOfPtr++
+		}
+	} else {
+		var pageIndex uint32
+		if insert_idx == pg.header.numOfPtr {
+			pageIndex = pg.cells[pg.header.rightmostPtr].(KeyCell).pageIndex
+		} else {
+			cellIndex := pg.ptrs[insert_idx]
+			pageIndex = pg.cells[cellIndex].(KeyCell).pageIndex
+		}
+		blk := newBlockId(pageIndex)
+		splitted, splitKey, leftPageIndex := bm.pool[ptb.getBuffId(blk)].addRecordRec(rec)
+		if splitted {
+			if insert_idx == pg.header.numOfPtr {
+				insert_idx--
+			}
+			pg.ptrs = insertInt(int(insert_idx), pg.header.numOfPtr, pg.ptrs)
+			pg.cells = append(pg.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
+			pg.header.numOfPtr++
+		}
 	}
-	if PageHeaderSize+4*(pg.header.numOfPtr+1) > PageSize-pg.getContentSize()-cell.getSize() {
-		panic(errors.New("full root page"))
+
+	// Fanout(MaxDegree)を超えた時には分割する
+	if pg.header.isLeaf && pg.header.numOfPtr >= MaxDegree {
+		splitted = true
+		splitIndex := pg.header.numOfPtr / 2
+		splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyValueCell).key
+		leftPage := newPage()
+		blk := newUniqueBlockId()
+		ptb.set(blk, leftPage)
+		leftPageIndex = blk.blockNum
+		leftPage.ptrs = make([]uint32, splitIndex)
+		leftPage.cells = make([]Cell, splitIndex)
+		for i := 0; i < int(splitIndex); i++ {
+			leftPage.ptrs[i] = uint32(i)
+			leftPage.cells[i] = pg.cells[pg.ptrs[i]]
+		}
+		leftPage.header.numOfPtr = splitIndex
+		pg.ptrs = pg.ptrs[splitIndex:]
+		pg.header.numOfPtr -= splitIndex
+	} else if !pg.header.isLeaf && pg.header.numOfPtr > MaxDegree {
+		// ページがnon leafの時にはrightmost ptrが有効になることによって
+		// 分割の動作と分割条件が異なる
+		splitted = true
+		splitIndex := (pg.header.numOfPtr - 1) / 2
+		splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyCell).key
+		leftPage := newNonLeafPage()
+		blk := newUniqueBlockId()
+		ptb.set(blk, leftPage)
+		leftPageIndex = blk.blockNum
+		leftPage.ptrs = make([]uint32, splitIndex-1)
+		leftPage.cells = make([]Cell, splitIndex)
+		for i := 0; i < int(splitIndex-1); i++ {
+			leftPage.ptrs[i] = uint32(i)
+			leftPage.cells[i] = pg.cells[pg.ptrs[i]]
+		}
+		leftPage.header.rightmostPtr = splitIndex - 1
+		leftPage.cells[splitIndex-1] = pg.cells[pg.ptrs[splitIndex-1]]
+		leftPage.header.numOfPtr = splitIndex
+		pg.ptrs = pg.ptrs[splitIndex:]
+		pg.header.numOfPtr -= splitIndex
+	} else {
+		splitted = false
 	}
-	idx := pg.locateLocally(cell.key)
-	pg.ptrs = append(pg.ptrs, 0)
-	copy(pg.ptrs[idx+1:], pg.ptrs[idx:])
-	pg.ptrs[idx] = pg.header.numOfPtr
-	pg.cells = append(pg.cells, cell)
-	pg.header.numOfPtr++
+	return
 }
 
 func (pg *Page) toBytes() []byte {
 	buf := make([]byte, PageSize)
 	copy(buf[:PageHeaderSize], pg.header.toBytes())
-	ptrRawValues := make([]uint32, pg.header.numOfPtr)
+	ptrRawValues := make([]uint32, len(pg.cells))
 	cur := PageSize
-	for i, cell := range pg.cells {
+	for i, ptr := range pg.ptrs {
+		// すでに有効でないcellを書き込まないためにptrでループを回す
+		cell := pg.cells[pg.ptrs[i]]
 		copy(buf[cur-int(cell.getSize()):cur], cell.toBytes())
 		cur = cur - int(cell.getSize())
-		ptrRawValues[i] = uint32(cur)
+		ptrRawValues[ptr] = uint32(cur)
 	}
-	for i, ptr := range pg.ptrs {
-		rawValue := ptrRawValues[int(ptr)]
+
+	for i := range pg.ptrs {
+		rawValue := ptrRawValues[int(i)]
 		binary.BigEndian.PutUint32(buf[PageHeaderSize+i*4:PageHeaderSize+(i+1)*4], rawValue)
 	}
+
 	return buf
+}
+
+func (pg *Page) info() {
+	fmt.Printf("Page Info ... \n")
+	fmt.Printf("| isLeaf %v\n", pg.header.isLeaf)
+	fmt.Printf("| numofptrs ... %d\n", pg.header.numOfPtr)
+	fmt.Printf("| len(ptrs) %d, ptrs... %v\n", len(pg.ptrs), pg.ptrs)
+	fmt.Printf("| rightmost ptr ... %d\n", pg.header.rightmostPtr)
+	fmt.Printf("| len(cells) %d, cells... %v\n", len(pg.cells), pg.cells)
 }
