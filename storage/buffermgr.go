@@ -2,9 +2,10 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 )
 
-const MaxBufferPoolSize = 15
+const MaxBufferPoolSize = 5
 
 // The page table keeps track of pages
 // that are currently in memory.
@@ -49,7 +50,9 @@ func (ptb *PageTable) makeSpace() {
 		// unpinされるまで待つ実装でいつか置き換える
 		panic(errors.New("unexpected"))
 	}
+	fmt.Println("MakeSpace")
 	for {
+		ptb.Print()
 		dropBlkNum := ptb.queue.Pop()
 		dropBlk := newBlockId(uint32(dropBlkNum))
 		dropBuffId := ptb.table[int(dropBlkNum)]
@@ -68,6 +71,7 @@ func (ptb *PageTable) makeSpace() {
 			}
 		}
 	}
+	ptb.Print()
 
 }
 
@@ -95,7 +99,7 @@ func (ptb *PageTable) available() bool {
 func (ptb *PageTable) set(blk BlockId, pg *Page) {
 	ptb.makeSpace()
 	ptb.queue.Push(int(blk.blockNum))
-	buff := newBufferFromPage(pg)
+	buff := newBufferFromPage(blk, pg)
 	buffId := bm.allocate(buff)
 	ptb.table[int(blk.blockNum)] = buffId
 }
@@ -125,22 +129,47 @@ func (ptb *PageTable) unpin(blk BlockId) {
 	ptb.numOfPin--
 }
 
+func (ptb *PageTable) Print() {
+	fmt.Printf("Print Page table {\n")
+	fmt.Printf("table %v\n", ptb.table)
+	fmt.Printf("queue [ ")
+	ptb.queue.Print()
+	fmt.Printf(" ]\n")
+	fmt.Printf("NumOfPins {%d}\n", ptb.numOfPin)
+	bm.Print()
+	fmt.Printf("}\n")
+}
+
 type Buffer struct {
 	pin     bool
 	ref     bool
+	blk     BlockId
 	content *Page
 }
 
-func newBufferFromPage(pg *Page) *Buffer {
+func newBufferFromPage(blk BlockId, pg *Page) *Buffer {
 	buff := &Buffer{}
 	buff.content = pg
 	buff.pin = false
 	buff.ref = false
+	buff.blk = blk
 	return buff
 }
 
 func (buff *Buffer) page() *Page {
 	return buff.content
+}
+
+func (buff *Buffer) Print() {
+	fmt.Printf("Buffer {")
+	fmt.Printf("BlockID %d, ", buff.blk)
+	if buff.pin {
+		fmt.Print("pin, ")
+	} else {
+		fmt.Print("unpin, ")
+	}
+	fmt.Printf("ref {%v}", buff.ref)
+	fmt.Printf("}")
 }
 
 type BufferMgr struct {
@@ -168,7 +197,7 @@ func (bm *BufferMgr) load(blk BlockId) int {
 	if n == 0 {
 		panic(errors.New("invalid BlockId was selected"))
 	}
-	buff := newBufferFromPage(pg)
+	buff := newBufferFromPage(blk, pg)
 	for i := 0; i < MaxBufferPoolSize; i++ {
 		if bm.pool[i] == nil {
 			bm.pool[i] = buff
@@ -176,4 +205,22 @@ func (bm *BufferMgr) load(blk BlockId) int {
 		}
 	}
 	panic(errors.New("no space for page"))
+}
+
+func (bm *BufferMgr) Print() {
+	fmt.Printf("Print BufferMgr [\n")
+	for i, p := range bm.pool {
+		if i != 0 {
+			fmt.Printf(", ")
+		}
+		if p == nil {
+			fmt.Printf("nil")
+		} else {
+			p.Print()
+		}
+		if i != len(bm.pool)-1 {
+			fmt.Printf("\n")
+		}
+	}
+	fmt.Printf(" ]\n")
 }

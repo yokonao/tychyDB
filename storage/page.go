@@ -235,10 +235,11 @@ func (pg *Page) toBytes() []byte {
 }
 
 func (pg *Page) info() {
-	fmt.Printf("Page Info ... \n")
-	fmt.Printf("| isLeaf %v\n", pg.header.isLeaf)
-	fmt.Printf("| numofptrs ... %d\n", pg.header.numOfPtr)
-	fmt.Printf("| len(ptrs) %d, ptrs... %v\n", len(pg.ptrs), pg.ptrs)
-	fmt.Printf("| rightmost ptr ... %d\n", pg.header.rightmostPtr)
-	fmt.Printf("| len(cells) %d, cells... %v\n", len(pg.cells), pg.cells)
+	fmt.Printf("Page Info {\n")
+	fmt.Printf("isLeaf %v\n", pg.header.isLeaf)
+	fmt.Printf("numofptrs ... %d\n", pg.header.numOfPtr)
+	fmt.Printf("len(ptrs) %d, ptrs... %v\n", len(pg.ptrs), pg.ptrs)
+	fmt.Printf("rightmost ptr ... %d\n", pg.header.rightmostPtr)
+	fmt.Printf("len(cells) %d, cells... %v\n", len(pg.cells), pg.cells)
+	fmt.Printf("}\n")
 }

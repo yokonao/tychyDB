@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 )
 
 type Queue struct {
@@ -43,4 +44,17 @@ func (q *Queue) Pop() (res int) {
 	res = q.b[q.h]
 	q.h = (q.h + 1) % len(q.b)
 	return
+}
+
+func (q *Queue) Print() {
+	for i := 0; i < q.Size(); i++ {
+		index := (q.h + i) % len(q.b)
+		if i == 0 {
+			fmt.Printf("%d", q.b[index])
+
+		} else {
+
+			fmt.Printf(", %d", q.b[index])
+		}
+	}
 }
