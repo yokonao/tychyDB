@@ -27,16 +27,31 @@ type Table struct {
 	rootBlk BlockId
 }
 
+func Reset() {
+	UniqueBlockId = 0
+	bm = newBufferMgr()
+	ptb = newPageTable()
+}
+
 func NewTable() Table {
 	t := Table{}
+	// テーブルのメタ情報を置くためのページ
+	metaPage := newMetaPage()
+	metaBlk := newUniqueBlockId()
+	if metaBlk.blockNum != 0 {
+		panic(errors.New("Place a meta page at the top of the file."))
+	}
+	fm.write(metaBlk, metaPage.toBytes())
+
+	// rootノード
 	root := newNonLeafPage()
 	t.rootBlk = newUniqueBlockId()
 	ptb.set(t.rootBlk, root)
 	return t
 }
 
-func (t *Table) Clear() {
-	ptb.clear()
+func (t *Table) Flush() {
+	ptb.flush()
 }
 
 func (t *Table) AddColumn(name string, ty Type) {

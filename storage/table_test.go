@@ -19,6 +19,7 @@ func cleanDisk(t *testing.T) {
 
 func TestStorageEasy(t *testing.T) {
 	cleanDisk(t)
+	storage.Reset()
 
 	tb := storage.NewTable()
 	tb.AddColumn("hoge", storage.IntergerType)
@@ -33,6 +34,7 @@ func TestStorageEasy(t *testing.T) {
 }
 func TestStorage(t *testing.T) {
 	cleanDisk(t)
+	storage.Reset()
 
 	tb := storage.NewTable()
 	tb.AddColumn("hoge", storage.IntergerType)
@@ -62,7 +64,7 @@ func TestStorage(t *testing.T) {
 	if res[3][3].(int32) != -13 {
 		t.Errorf("expected: -13, actual: %d", res[3][3])
 	}
-	tb.Clear()
+	tb.Flush()
 	res, err = tb.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
@@ -83,6 +85,7 @@ func TestStorage(t *testing.T) {
 
 func TestStorageChar(t *testing.T) {
 	cleanDisk(t)
+	storage.Reset()
 
 	countryTable := storage.NewTable()
 	countryTable.AddColumn("name", storage.CharType(10))
@@ -109,7 +112,7 @@ func TestStorageChar(t *testing.T) {
 		t.Errorf("expected: Nigeria, actual: %s\n", res[0][3].(string))
 	}
 
-	countryTable.Clear()
+	countryTable.Flush()
 	res, err = countryTable.Select("continent", "name")
 	if err != nil {
 		t.Error("failure select")
