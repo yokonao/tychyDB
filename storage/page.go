@@ -93,7 +93,6 @@ func newPageFromBytes(bytes []byte) *Page {
 		pg.cells = append(pg.cells, rightmostCell)
 		pg.header.rightmostPtr = pg.header.numOfPtr - 1
 	}
-	pg.info()
 	return pg
 }
 

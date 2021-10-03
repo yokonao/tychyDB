@@ -14,29 +14,87 @@ var ptb = newPageTable()
 
 type Column struct {
 	ty   Type
-	name string
 	pos  uint32
+	name string
 }
 
 func (c Column) String() string {
 	return fmt.Sprintf("{ type: %s, name: %s }", c.ty, c.name)
 }
 
+func (c Column) toBytes() []byte {
+	bytes := []byte{}
+	buf := make([]byte, 4*IntSize)
+	binary.BigEndian.PutUint32(buf[:IntSize], uint32(4*IntSize+c.ty.size))
+	binary.BigEndian.PutUint32(buf[IntSize:2*IntSize], uint32(c.ty.id))
+	binary.BigEndian.PutUint32(buf[2*IntSize:3*IntSize], c.ty.size)
+	binary.BigEndian.PutUint32(buf[3*IntSize:4*IntSize], c.pos)
+
+	bytes = append(bytes, buf...)
+
+	buf = make([]byte, c.ty.size)
+	rd := strings.NewReader(c.name)
+	rd.Read(buf)
+	bytes = append(bytes, buf...)
+	return bytes
+}
+
+func newColumnfromBytes(bytes []byte) Column {
+	c := Column{}
+	c.ty.id = TypeId(binary.BigEndian.Uint32(bytes[IntSize : 2*IntSize]))
+	c.ty.size = binary.BigEndian.Uint32(bytes[2*IntSize : 3*IntSize])
+	c.pos = binary.BigEndian.Uint32(bytes[3*IntSize : 4*IntSize])
+	c.name = string(bytes[4*IntSize:])
+	return c
+}
+
 type Table struct {
-	cols    []Column
-	rootBlk BlockId
+	cols     []Column
+	rootBlk  BlockId
+	metaPage *MetaPage
+}
+
+func Reset() {
+	UniqueBlockId = 0
+	bm = newBufferMgr()
+	ptb = newPageTable()
 }
 
 func NewTable() Table {
 	t := Table{}
+	// テーブルのメタ情報を置くためのページ
+
+	metaBlk := newUniqueBlockId()
+	t.metaPage = newMetaPage(metaBlk)
+	if metaBlk.blockNum != 0 {
+		panic(errors.New("Place a meta page at the top of the file."))
+	}
+	fm.write(metaBlk, t.metaPage.toBytes())
+
+	// rootノード
 	root := newNonLeafPage()
 	t.rootBlk = newUniqueBlockId()
 	ptb.set(t.rootBlk, root)
+	t.metaPage.rootBlk = t.rootBlk
 	return t
 }
 
-func (t *Table) Clear() {
-	ptb.clear()
+func NewTableFromFIle() Table {
+	t := Table{}
+	blk := newUniqueBlockId()
+	if blk.blockNum != 0 {
+		panic(errors.New("expect 0"))
+	}
+	_, bytes := fm.read(blk)
+	t.metaPage = newMetaPageFromBytes(bytes)
+	t.rootBlk = t.metaPage.rootBlk
+	t.cols = t.metaPage.cols
+	return t
+}
+
+func (t *Table) Flush() {
+	ptb.flush()
+	fm.write(t.metaPage.metaBlk, t.metaPage.toBytes())
 }
 
 func (t *Table) AddColumn(name string, ty Type) {
@@ -48,6 +106,8 @@ func (t *Table) AddColumn(name string, ty Type) {
 		pos = last.pos + last.ty.size
 	}
 	t.cols = append(t.cols, Column{ty: ty, name: name, pos: pos})
+	t.metaPage.cols = append(t.cols, Column{ty: ty, name: name, pos: pos})
+
 }
 
 func (t *Table) addRecord(rec Record) {
@@ -77,6 +137,7 @@ func (t *Table) addRecord(rec Record) {
 			newRootPage.header.numOfPtr += 2
 			ptb.unpin(t.rootBlk)
 			t.rootBlk = blk
+			t.metaPage.rootBlk = blk
 		}
 		ptb.unpin(t.rootBlk)
 	}

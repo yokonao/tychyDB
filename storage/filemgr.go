@@ -20,7 +20,7 @@ func newFileMgr() *FileMgr {
 	}
 }
 
-func (fm *FileMgr) write(blk BlockId, pg *Page) {
+func (fm *FileMgr) write(blk BlockId, bytes []byte) {
 	file, err := os.OpenFile(fm.basePath+"testfile", os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		panic(err)
@@ -32,13 +32,13 @@ func (fm *FileMgr) write(blk BlockId, pg *Page) {
 		panic(err)
 	}
 
-	_, err = file.Write(pg.toBytes())
+	_, err = file.Write(bytes)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (fm *FileMgr) read(blk BlockId) (int, *Page) {
+func (fm *FileMgr) read(blk BlockId) (int, []byte) {
 	file, err := os.Open(fm.basePath + "testfile")
 	if err != nil {
 		panic(err)
@@ -53,11 +53,10 @@ func (fm *FileMgr) read(blk BlockId) (int, *Page) {
 	buf := make([]byte, PageSize)
 	n, err := file.Read(buf)
 	if n == 0 {
-		return n, newPage()
+		return n, buf
 	}
 	if err != nil {
 		panic(err)
 	}
-	pg := newPageFromBytes(buf)
-	return n, pg
+	return n, buf
 }

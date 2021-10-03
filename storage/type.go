@@ -1,6 +1,6 @@
 package storage
 
-type TypeId int
+type TypeId uint32
 
 const (
 	integerId = iota

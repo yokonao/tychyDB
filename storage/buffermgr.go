@@ -24,7 +24,7 @@ func newPageTable() *PageTable {
 	return ptb
 }
 
-func (ptb *PageTable) clear() {
+func (ptb *PageTable) flush() {
 	for {
 		if ptb.queue.IsEmpty() {
 			break
@@ -33,7 +33,7 @@ func (ptb *PageTable) clear() {
 		curBlk := newBlockId(uint32(curBlkNum))
 		curBuffId := ptb.table[int(curBlkNum)]
 		delete(ptb.table, int(curBlkNum))
-		fm.write(curBlk, bm.pool[curBuffId].page())
+		fm.write(curBlk, bm.pool[curBuffId].page().toBytes())
 		bm.pool[curBuffId] = nil
 
 	}
@@ -50,9 +50,9 @@ func (ptb *PageTable) makeSpace() {
 		// unpinされるまで待つ実装でいつか置き換える
 		panic(errors.New("unexpected"))
 	}
-	fmt.Println("MakeSpace")
+	//fmt.Println("MakeSpace")
 	for {
-		ptb.Print()
+		//ptb.Print()
 		dropBlkNum := ptb.queue.Pop()
 		dropBlk := newBlockId(uint32(dropBlkNum))
 		dropBuffId := ptb.table[int(dropBlkNum)]
@@ -65,13 +65,13 @@ func (ptb *PageTable) makeSpace() {
 				ptb.queue.Push(dropBlkNum)
 			} else {
 				delete(ptb.table, int(dropBlkNum))
-				fm.write(dropBlk, bm.pool[dropBuffId].content)
+				fm.write(dropBlk, bm.pool[dropBuffId].page().toBytes())
 				bm.pool[dropBuffId] = nil
 				break
 			}
 		}
 	}
-	ptb.Print()
+	//ptb.Print()
 
 }
 
@@ -193,10 +193,12 @@ func (bm *BufferMgr) allocate(buff *Buffer) int {
 }
 
 func (bm *BufferMgr) load(blk BlockId) int {
-	n, pg := fm.read(blk)
+	n, bytes := fm.read(blk)
 	if n == 0 {
 		panic(errors.New("invalid BlockId was selected"))
 	}
+
+	pg := newPageFromBytes(bytes)
 	buff := newBufferFromPage(blk, pg)
 	for i := 0; i < MaxBufferPoolSize; i++ {
 		if bm.pool[i] == nil {
