@@ -9,11 +9,7 @@ import (
 )
 
 func cleanDisk(t *testing.T) {
-	curDir, err := os.Getwd()
-	if err != nil {
-		t.Fatal("failure for getting current directory path")
-	}
-	diskDir := curDir + "/disk"
+	diskDir := os.Getenv("DISK")
 	os.Remove(diskDir + "/testfile")
 }
 

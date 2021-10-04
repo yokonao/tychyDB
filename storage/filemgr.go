@@ -10,12 +10,9 @@ type FileMgr struct {
 }
 
 func newFileMgr() *FileMgr {
-	curDir, err := os.Getwd()
-	if err != nil {
-		panic("failure for getting current director path")
-	}
+	diskDir := os.Getenv("DISK")
 	return &FileMgr{
-		basePath:  curDir + "/disk/",
+		basePath:  diskDir,
 		blockSize: PageSize,
 	}
 }

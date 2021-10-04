@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math"
 	"strings"
+
+	"github.com/tychyDB/transaction"
 )
 
 var fm = newFileMgr()
@@ -176,7 +178,7 @@ func (t *Table) Add(args ...interface{}) error {
 	return nil
 }
 
-func (t *Table) Update(prColName string, prVal interface{}, targetColName string, replaceTo interface{}) {
+func (t *Table) Update(prColName string, prVal interface{}, targetColName string, replaceTo interface{}) transaction.UpdateInfo {
 	rootPage := ptb.pin(t.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		panic(errors.New("unexpected"))
@@ -247,17 +249,23 @@ func (t *Table) Update(prColName string, prVal interface{}, targetColName string
 	}
 	// レコードを抜き出す
 	rec := curPage.cells[cellIdx].(KeyValueCell).rec
-	replaceBuf := make([]byte, col.ty.size)
+	fromBuf := make([]byte, col.ty.size)
+	toBuf := make([]byte, col.ty.size)
 	if targetCol.ty.id == integerId {
 		val := uint32(replaceTo.(int))
-		binary.BigEndian.PutUint32(replaceBuf, val)
+		binary.BigEndian.PutUint32(toBuf, val)
 	} else if targetCol.ty.id == charId {
 		rd := strings.NewReader(replaceTo.(string))
-		rd.Read(replaceBuf)
+		rd.Read(toBuf)
 	}
-	copy(rec.data[targetCol.pos:targetCol.pos+targetCol.ty.size], replaceBuf)
+	copy(fromBuf, rec.data[targetCol.pos:targetCol.pos+targetCol.ty.size])
+	copy(rec.data[targetCol.pos:targetCol.pos+targetCol.ty.size], toBuf)
 
 	curPage.cells[cellIdx] = KeyValueCell{key: rec.getKey(), rec: rec}
+
+	// UpdateInfoの作成
+	updateInfo := transaction.NewUpdateInfo(curBlk.blockNum, ptrIdx, uint32(targetColIndex), fromBuf, toBuf)
+	return updateInfo
 }
 
 func (t *Table) selectInt(col Column) (res []interface{}, err error) {
