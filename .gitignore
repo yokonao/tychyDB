@@ -20,3 +20,9 @@
 # Virtual disk directory
 **/disk/*
 !**/disk/.gitkeep
+
+# Mac
+.DS_Store
+
+# GraphViz
+*.png
