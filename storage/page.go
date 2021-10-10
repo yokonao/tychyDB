@@ -162,9 +162,9 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		actualMaxDegree++
 	}
 	if pg.header.numOfPtr >= actualMaxDegree {
+		splitted = true
+		splitIndex := pg.header.numOfPtr / 2
 		if pg.header.isLeaf {
-			splitted = true
-			splitIndex := pg.header.numOfPtr / 2
 			splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyValueCell).key
 			leftPage := newPage(true)
 			blk := newUniqueBlockId()
@@ -181,10 +181,6 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 			pg.ptrs = pg.ptrs[splitIndex:]
 			pg.header.numOfPtr -= splitIndex
 		} else if !pg.header.isLeaf {
-			// ページがnon leafの時にはrightmost ptrが有効になることによって
-			// 分割の動作と分割条件が異なる
-			splitted = true
-			splitIndex := pg.header.numOfPtr / 2
 			splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyCell).key
 			leftPage := newPage(false)
 			blk := newUniqueBlockId()
