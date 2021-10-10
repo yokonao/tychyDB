@@ -182,8 +182,8 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		}
 		leftPage.header.numOfPtr = splitIndex
 		if !pg.header.isLeaf {
-			leftPage.header.rightmostPtr = splitIndex - 1
-			leftPage.cells[splitIndex-1] = pg.cells[pg.ptrs[splitIndex-1]]
+			leftPage.header.rightmostPtr = numOfPtrExclusiveRightmost
+			leftPage.cells[numOfPtrExclusiveRightmost] = pg.cells[pg.ptrs[numOfPtrExclusiveRightmost]]
 		}
 		pg.ptrs = pg.ptrs[splitIndex:]
 		pg.header.numOfPtr -= splitIndex
