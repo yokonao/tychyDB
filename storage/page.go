@@ -164,40 +164,29 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 	if pg.header.numOfPtr >= actualMaxDegree {
 		splitted = true
 		splitIndex := pg.header.numOfPtr / 2
-		splitKey = pg.cells[pg.ptrs[splitIndex]].getKey();
-		if pg.header.isLeaf {
-			leftPage := newPage(true)
-			blk := newUniqueBlockId()
-			ptb.set(blk, leftPage)
-			ptb.pin(blk)
-			leftPageIndex = blk.blockNum
-			leftPage.ptrs = make([]uint32, splitIndex)
-			leftPage.cells = make([]Cell, splitIndex)
-			for i := 0; i < int(splitIndex); i++ {
-				leftPage.ptrs[i] = uint32(i)
-				leftPage.cells[i] = pg.cells[pg.ptrs[i]]
-			}
-			leftPage.header.numOfPtr = splitIndex
-			pg.ptrs = pg.ptrs[splitIndex:]
-			pg.header.numOfPtr -= splitIndex
-		} else if !pg.header.isLeaf {
-			leftPage := newPage(false)
-			blk := newUniqueBlockId()
-			ptb.set(blk, leftPage)
-			ptb.pin(blk)
-			leftPageIndex = blk.blockNum
-			leftPage.ptrs = make([]uint32, splitIndex-1)
-			leftPage.cells = make([]Cell, splitIndex)
-			for i := 0; i < int(splitIndex-1); i++ {
-				leftPage.ptrs[i] = uint32(i)
-				leftPage.cells[i] = pg.cells[pg.ptrs[i]]
-			}
+		splitKey = pg.cells[pg.ptrs[splitIndex]].getKey()
+		leftPage := newPage(pg.header.isLeaf)
+		blk := newUniqueBlockId()
+		ptb.set(blk, leftPage)
+		ptb.pin(blk)
+		leftPageIndex = blk.blockNum
+		numOfPtrExclusiveRightmost := splitIndex
+		if !pg.header.isLeaf {
+			numOfPtrExclusiveRightmost--
+		}
+		leftPage.ptrs = make([]uint32, numOfPtrExclusiveRightmost)
+		leftPage.cells = make([]Cell, splitIndex)
+		for i := 0; i < int(numOfPtrExclusiveRightmost); i++ {
+			leftPage.ptrs[i] = uint32(i)
+			leftPage.cells[i] = pg.cells[pg.ptrs[i]]
+		}
+		leftPage.header.numOfPtr = splitIndex
+		if !pg.header.isLeaf {
 			leftPage.header.rightmostPtr = splitIndex - 1
 			leftPage.cells[splitIndex-1] = pg.cells[pg.ptrs[splitIndex-1]]
-			leftPage.header.numOfPtr = splitIndex
-			pg.ptrs = pg.ptrs[splitIndex:]
-			pg.header.numOfPtr -= splitIndex
 		}
+		pg.ptrs = pg.ptrs[splitIndex:]
+		pg.header.numOfPtr -= splitIndex
 	} else {
 		splitted = false
 	}
