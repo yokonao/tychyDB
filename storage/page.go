@@ -132,13 +132,11 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 	if pg.header.isLeaf {
 		if len(pg.ptrs) == 0 {
 			pg.ptrs = append(pg.ptrs, 0)
-			pg.cells = append(pg.cells, KeyValueCell{key: key, rec: rec})
-			pg.header.numOfPtr++
 		} else {
 			pg.ptrs = insertInt(int(insert_idx), uint32(len(pg.cells)), pg.ptrs)
-			pg.cells = append(pg.cells, KeyValueCell{key: key, rec: rec})
-			pg.header.numOfPtr++
 		}
+		pg.cells = append(pg.cells, KeyValueCell{key: key, rec: rec})
+		pg.header.numOfPtr++
 	} else {
 		var pageIndex uint32
 		if insert_idx == pg.header.numOfPtr {
@@ -163,7 +161,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		}
 		ptb.unpin(blk)
 	}
-	
+
 	if pg.needSplit() {
 		splitted = true
 		splitIndex := pg.header.numOfPtr / 2
