@@ -57,9 +57,9 @@ type Page struct {
 	cells  []Cell   // [0]が最初に挿入されたセル
 }
 
-func newPage() *Page {
+func newPage(isLeaf bool) *Page {
 	pg := &Page{}
-	pg.header = PageHeader{isLeaf: true, numOfPtr: 0}
+	pg.header = PageHeader{isLeaf: isLeaf, numOfPtr: 0}
 	pg.ptrs = make([]uint32, 0)
 	pg.cells = make([]Cell, 0)
 	return pg
@@ -93,14 +93,6 @@ func newPageFromBytes(bytes []byte) *Page {
 		pg.cells = append(pg.cells, rightmostCell)
 		pg.header.rightmostPtr = pg.header.numOfPtr - 1
 	}
-	return pg
-}
-
-func newNonLeafPage() *Page {
-	pg := &Page{}
-	pg.header = PageHeader{isLeaf: false, numOfPtr: 0}
-	pg.ptrs = make([]uint32, 0)
-	pg.cells = make([]Cell, 0)
 	return pg
 }
 
@@ -167,7 +159,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		splitted = true
 		splitIndex := pg.header.numOfPtr / 2
 		splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyValueCell).key
-		leftPage := newPage()
+		leftPage := newPage(true)
 		blk := newUniqueBlockId()
 		ptb.set(blk, leftPage)
 		ptb.pin(blk)
@@ -187,7 +179,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		splitted = true
 		splitIndex := pg.header.numOfPtr / 2
 		splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyCell).key
-		leftPage := newNonLeafPage()
+		leftPage := newPage(false)
 		blk := newUniqueBlockId()
 		ptb.set(blk, leftPage)
 		ptb.pin(blk)

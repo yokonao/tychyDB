@@ -72,7 +72,7 @@ func NewTable() Table {
 	fm.write(metaBlk, t.metaPage.toBytes())
 
 	// rootノード
-	root := newNonLeafPage()
+	root := newPage(false)
 	t.rootBlk = newUniqueBlockId()
 	ptb.set(t.rootBlk, root)
 	t.metaPage.rootBlk = t.rootBlk
@@ -113,7 +113,7 @@ func (t *Table) AddColumn(name string, ty Type) {
 func (t *Table) addRecord(rec Record) {
 	rootPage := ptb.pin(t.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
-		pg := newPage()
+		pg := newPage(true)
 		blk := newUniqueBlockId()
 		ptb.set(blk, pg)
 		rootPage.cells = append(rootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: blk.blockNum})
@@ -127,7 +127,7 @@ func (t *Table) addRecord(rec Record) {
 		splitted, splitKey, leftPageIndex := rootPage.addRecordRec(rec)
 		t.Viz("mid")
 		if splitted {
-			newRootPage := newNonLeafPage()
+			newRootPage := newPage(false)
 			blk := newUniqueBlockId()
 			ptb.set(blk, newRootPage)
 			ptb.pin(blk)
