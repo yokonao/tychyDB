@@ -164,8 +164,8 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 	if pg.header.numOfPtr >= actualMaxDegree {
 		splitted = true
 		splitIndex := pg.header.numOfPtr / 2
+		splitKey = pg.cells[pg.ptrs[splitIndex]].getKey();
 		if pg.header.isLeaf {
-			splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyValueCell).key
 			leftPage := newPage(true)
 			blk := newUniqueBlockId()
 			ptb.set(blk, leftPage)
@@ -181,7 +181,6 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 			pg.ptrs = pg.ptrs[splitIndex:]
 			pg.header.numOfPtr -= splitIndex
 		} else if !pg.header.isLeaf {
-			splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyCell).key
 			leftPage := newPage(false)
 			blk := newUniqueBlockId()
 			ptb.set(blk, leftPage)
