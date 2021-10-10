@@ -170,20 +170,15 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		ptb.set(blk, leftPage)
 		ptb.pin(blk)
 		leftPageIndex = blk.blockNum
-		numOfPtrExclusiveRightmost := splitIndex
-		if !pg.header.isLeaf {
-			numOfPtrExclusiveRightmost--
-		}
-		leftPage.ptrs = make([]uint32, numOfPtrExclusiveRightmost)
+		leftPage.ptrs = make([]uint32, splitIndex)
 		leftPage.cells = make([]Cell, splitIndex)
-		for i := 0; i < int(numOfPtrExclusiveRightmost); i++ {
+		for i := 0; i < int(splitIndex); i++ {
 			leftPage.ptrs[i] = uint32(i)
 			leftPage.cells[i] = pg.cells[pg.ptrs[i]]
 		}
 		leftPage.header.numOfPtr = splitIndex
 		if !pg.header.isLeaf {
-			leftPage.header.rightmostPtr = numOfPtrExclusiveRightmost
-			leftPage.cells[numOfPtrExclusiveRightmost] = pg.cells[pg.ptrs[numOfPtrExclusiveRightmost]]
+			leftPage.header.rightmostPtr = splitIndex - 1
 		}
 		pg.ptrs = pg.ptrs[splitIndex:]
 		pg.header.numOfPtr -= splitIndex
