@@ -117,6 +117,15 @@ func insertInt(index int, item uint32, arr []uint32) []uint32 {
 	return arr
 }
 
+// NonLeafPageではrightmost ptrが有効になるため分割条件が異なる
+func (pg *Page) needSplit() bool {
+	if pg.header.isLeaf {
+		return pg.header.numOfPtr >= MaxDegree
+	} else {
+		return pg.header.numOfPtr > MaxDegree
+	}
+}
+
 func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPageIndex uint32) {
 	key := rec.getKey()
 	insert_idx := pg.locateLocally(key)
@@ -154,14 +163,8 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		}
 		ptb.unpin(blk)
 	}
-	// Fanout(MaxDegree)を超えた時には分割する
-	actualMaxDegree := uint32(MaxDegree)
-	if !pg.header.isLeaf {
-		// ページがnon leafの時にはrightmost ptrが有効になることによって
-		// 分割の動作と分割条件が異なる
-		actualMaxDegree++
-	}
-	if pg.header.numOfPtr >= actualMaxDegree {
+	
+	if pg.needSplit() {
 		splitted = true
 		splitIndex := pg.header.numOfPtr / 2
 		splitKey = pg.cells[pg.ptrs[splitIndex]].getKey()
