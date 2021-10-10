@@ -155,46 +155,54 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		ptb.unpin(blk)
 	}
 	// Fanout(MaxDegree)を超えた時には分割する
-	if pg.header.isLeaf && pg.header.numOfPtr >= MaxDegree {
-		splitted = true
-		splitIndex := pg.header.numOfPtr / 2
-		splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyValueCell).key
-		leftPage := newPage(true)
-		blk := newUniqueBlockId()
-		ptb.set(blk, leftPage)
-		ptb.pin(blk)
-		leftPageIndex = blk.blockNum
-		leftPage.ptrs = make([]uint32, splitIndex)
-		leftPage.cells = make([]Cell, splitIndex)
-		for i := 0; i < int(splitIndex); i++ {
-			leftPage.ptrs[i] = uint32(i)
-			leftPage.cells[i] = pg.cells[pg.ptrs[i]]
-		}
-		leftPage.header.numOfPtr = splitIndex
-		pg.ptrs = pg.ptrs[splitIndex:]
-		pg.header.numOfPtr -= splitIndex
-	} else if !pg.header.isLeaf && pg.header.numOfPtr > MaxDegree {
+	actualMaxDegree := uint32(MaxDegree)
+	if !pg.header.isLeaf {
 		// ページがnon leafの時にはrightmost ptrが有効になることによって
 		// 分割の動作と分割条件が異なる
-		splitted = true
-		splitIndex := pg.header.numOfPtr / 2
-		splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyCell).key
-		leftPage := newPage(false)
-		blk := newUniqueBlockId()
-		ptb.set(blk, leftPage)
-		ptb.pin(blk)
-		leftPageIndex = blk.blockNum
-		leftPage.ptrs = make([]uint32, splitIndex-1)
-		leftPage.cells = make([]Cell, splitIndex)
-		for i := 0; i < int(splitIndex-1); i++ {
-			leftPage.ptrs[i] = uint32(i)
-			leftPage.cells[i] = pg.cells[pg.ptrs[i]]
+		actualMaxDegree++
+	}
+	if pg.header.numOfPtr >= actualMaxDegree {
+		if pg.header.isLeaf {
+			splitted = true
+			splitIndex := pg.header.numOfPtr / 2
+			splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyValueCell).key
+			leftPage := newPage(true)
+			blk := newUniqueBlockId()
+			ptb.set(blk, leftPage)
+			ptb.pin(blk)
+			leftPageIndex = blk.blockNum
+			leftPage.ptrs = make([]uint32, splitIndex)
+			leftPage.cells = make([]Cell, splitIndex)
+			for i := 0; i < int(splitIndex); i++ {
+				leftPage.ptrs[i] = uint32(i)
+				leftPage.cells[i] = pg.cells[pg.ptrs[i]]
+			}
+			leftPage.header.numOfPtr = splitIndex
+			pg.ptrs = pg.ptrs[splitIndex:]
+			pg.header.numOfPtr -= splitIndex
+		} else if !pg.header.isLeaf {
+			// ページがnon leafの時にはrightmost ptrが有効になることによって
+			// 分割の動作と分割条件が異なる
+			splitted = true
+			splitIndex := pg.header.numOfPtr / 2
+			splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyCell).key
+			leftPage := newPage(false)
+			blk := newUniqueBlockId()
+			ptb.set(blk, leftPage)
+			ptb.pin(blk)
+			leftPageIndex = blk.blockNum
+			leftPage.ptrs = make([]uint32, splitIndex-1)
+			leftPage.cells = make([]Cell, splitIndex)
+			for i := 0; i < int(splitIndex-1); i++ {
+				leftPage.ptrs[i] = uint32(i)
+				leftPage.cells[i] = pg.cells[pg.ptrs[i]]
+			}
+			leftPage.header.rightmostPtr = splitIndex - 1
+			leftPage.cells[splitIndex-1] = pg.cells[pg.ptrs[splitIndex-1]]
+			leftPage.header.numOfPtr = splitIndex
+			pg.ptrs = pg.ptrs[splitIndex:]
+			pg.header.numOfPtr -= splitIndex
 		}
-		leftPage.header.rightmostPtr = splitIndex - 1
-		leftPage.cells[splitIndex-1] = pg.cells[pg.ptrs[splitIndex-1]]
-		leftPage.header.numOfPtr = splitIndex
-		pg.ptrs = pg.ptrs[splitIndex:]
-		pg.header.numOfPtr -= splitIndex
 	} else {
 		splitted = false
 	}
