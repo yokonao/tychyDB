@@ -134,7 +134,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 			pg.cells = append(pg.cells, KeyValueCell{key: key, rec: rec})
 			pg.header.numOfPtr++
 		} else {
-			pg.ptrs = insertInt(int(insert_idx), pg.header.numOfPtr, pg.ptrs)
+			pg.ptrs = insertInt(int(insert_idx), uint32(len(pg.cells)), pg.ptrs)
 			pg.cells = append(pg.cells, KeyValueCell{key: key, rec: rec})
 			pg.header.numOfPtr++
 		}
@@ -147,18 +147,21 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 			pageIndex = pg.cells[cellIndex].(KeyCell).pageIndex
 		}
 		blk := newBlockId(pageIndex)
+
 		splitted, splitKey, leftPageIndex := ptb.pin(blk).addRecordRec(rec)
 		if splitted {
 			if insert_idx == pg.header.numOfPtr {
+				// locatelocallyがrightmost ptrを返す時には
+				// len(pg.ptr)はpg.header.numOfptr-1になっていることに合わせる
 				insert_idx--
 			}
-			pg.ptrs = insertInt(int(insert_idx), pg.header.numOfPtr, pg.ptrs)
+			pg.ptrs = insertInt(int(insert_idx), uint32(len(pg.cells)), pg.ptrs)
 			pg.cells = append(pg.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
 			pg.header.numOfPtr++
+			ptb.unpin(newBlockId(leftPageIndex))
 		}
 		ptb.unpin(blk)
 	}
-
 	// Fanout(MaxDegree)を超えた時には分割する
 	if pg.header.isLeaf && pg.header.numOfPtr >= MaxDegree {
 		splitted = true
@@ -178,12 +181,11 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		leftPage.header.numOfPtr = splitIndex
 		pg.ptrs = pg.ptrs[splitIndex:]
 		pg.header.numOfPtr -= splitIndex
-		ptb.unpin(blk)
 	} else if !pg.header.isLeaf && pg.header.numOfPtr > MaxDegree {
 		// ページがnon leafの時にはrightmost ptrが有効になることによって
 		// 分割の動作と分割条件が異なる
 		splitted = true
-		splitIndex := (pg.header.numOfPtr - 1) / 2
+		splitIndex := pg.header.numOfPtr / 2
 		splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyCell).key
 		leftPage := newNonLeafPage()
 		blk := newUniqueBlockId()
@@ -201,7 +203,6 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		leftPage.header.numOfPtr = splitIndex
 		pg.ptrs = pg.ptrs[splitIndex:]
 		pg.header.numOfPtr -= splitIndex
-		ptb.unpin(blk)
 	} else {
 		splitted = false
 	}

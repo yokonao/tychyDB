@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const MaxBufferPoolSize = 5
+const MaxBufferPoolSize = 10
 
 // The page table keeps track of pages
 // that are currently in memory.
@@ -48,7 +48,7 @@ func (ptb *PageTable) makeSpace() {
 	}
 	if !ptb.available() {
 		// unpinされるまで待つ実装でいつか置き換える
-		panic(errors.New("unexpected"))
+		panic(errors.New("no space in buffer pool"))
 	}
 	//fmt.Println("MakeSpace")
 	for {
