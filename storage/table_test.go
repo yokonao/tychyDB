@@ -34,12 +34,15 @@ func createTable(t *testing.T) {
 	tb.Add(0, 0, 0)
 	tb.Add(80000, 10, 0)
 	tb.Flush()
-	tb.Print()
 
 	_, err := tb.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
+}
+
+func TestDebug(t *testing.T) {
+	createTable(t)
 }
 
 func TestStorageEasy(t *testing.T) {

@@ -125,6 +125,7 @@ func (t *Table) addRecord(rec Record) {
 		ptb.unpin(t.rootBlk)
 	} else {
 		splitted, splitKey, leftPageIndex := rootPage.addRecordRec(rec)
+		t.Viz("mid")
 		if splitted {
 			newRootPage := newNonLeafPage()
 			blk := newUniqueBlockId()
@@ -135,7 +136,6 @@ func (t *Table) addRecord(rec Record) {
 			newRootPage.cells = append(newRootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: t.rootBlk.blockNum})
 			newRootPage.cells = append(newRootPage.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
 			newRootPage.header.numOfPtr += 2
-			ptb.unpin(t.rootBlk)
 			t.rootBlk = blk
 			t.metaPage.rootBlk = blk
 		}
