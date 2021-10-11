@@ -199,3 +199,27 @@ func TestStorageRestore(t *testing.T) {
 		t.Errorf("expected: -13, actual: %d", res[3][3])
 	}
 }
+
+func TestUpdate(t *testing.T) {
+	createTable(t)
+	storage.Reset()
+	tb := storage.NewTableFromFIle() // hogeがプライマリー
+
+	tb.Update("hoge", 2, "fuga", 33)
+	res, err := tb.Select("hoge", "fuga", "piyo", "fuga")
+	if err != nil {
+		t.Error("failure select")
+	}
+	if res[0][0].(int32) != -345 {
+		t.Errorf("expected: -345, actual: %d", res[0][0])
+	}
+	if res[1][1].(int32) != 89 {
+		t.Errorf("expected: 89, actual: %d", res[1][1])
+	}
+	if res[2][2].(int32) != 0 {
+		t.Errorf("expected: 0, actual: %d", res[2][2])
+	}
+	if res[3][3].(int32) != 33 {
+		t.Errorf("expected: 33, actual: %d", res[3][3])
+	}
+}
