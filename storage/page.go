@@ -57,9 +57,9 @@ type Page struct {
 	cells  []Cell   // [0]が最初に挿入されたセル
 }
 
-func newPage() *Page {
+func newPage(isLeaf bool) *Page {
 	pg := &Page{}
-	pg.header = PageHeader{isLeaf: true, numOfPtr: 0}
+	pg.header = PageHeader{isLeaf: isLeaf, numOfPtr: 0}
 	pg.ptrs = make([]uint32, 0)
 	pg.cells = make([]Cell, 0)
 	return pg
@@ -96,14 +96,6 @@ func newPageFromBytes(bytes []byte) *Page {
 	return pg
 }
 
-func newNonLeafPage() *Page {
-	pg := &Page{}
-	pg.header = PageHeader{isLeaf: false, numOfPtr: 0}
-	pg.ptrs = make([]uint32, 0)
-	pg.cells = make([]Cell, 0)
-	return pg
-}
-
 func (pg *Page) locateLocally(key int32) uint32 {
 	for i, ptr := range pg.ptrs {
 		var compared int32
@@ -125,19 +117,26 @@ func insertInt(index int, item uint32, arr []uint32) []uint32 {
 	return arr
 }
 
+// NonLeafPageではrightmost ptrが有効になるため分割条件が異なる
+func (pg *Page) needSplit() bool {
+	if pg.header.isLeaf {
+		return pg.header.numOfPtr >= MaxDegree
+	} else {
+		return pg.header.numOfPtr > MaxDegree
+	}
+}
+
 func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPageIndex uint32) {
 	key := rec.getKey()
 	insert_idx := pg.locateLocally(key)
 	if pg.header.isLeaf {
 		if len(pg.ptrs) == 0 {
 			pg.ptrs = append(pg.ptrs, 0)
-			pg.cells = append(pg.cells, KeyValueCell{key: key, rec: rec})
-			pg.header.numOfPtr++
 		} else {
 			pg.ptrs = insertInt(int(insert_idx), uint32(len(pg.cells)), pg.ptrs)
-			pg.cells = append(pg.cells, KeyValueCell{key: key, rec: rec})
-			pg.header.numOfPtr++
 		}
+		pg.cells = append(pg.cells, KeyValueCell{key: key, rec: rec})
+		pg.header.numOfPtr++
 	} else {
 		var pageIndex uint32
 		if insert_idx == pg.header.numOfPtr {
@@ -162,12 +161,12 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		}
 		ptb.unpin(blk)
 	}
-	// Fanout(MaxDegree)を超えた時には分割する
-	if pg.header.isLeaf && pg.header.numOfPtr >= MaxDegree {
+
+	if pg.needSplit() {
 		splitted = true
 		splitIndex := pg.header.numOfPtr / 2
-		splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyValueCell).key
-		leftPage := newPage()
+		splitKey = pg.cells[pg.ptrs[splitIndex]].getKey()
+		leftPage := newPage(pg.header.isLeaf)
 		blk := newUniqueBlockId()
 		ptb.set(blk, leftPage)
 		ptb.pin(blk)
@@ -179,28 +178,9 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 			leftPage.cells[i] = pg.cells[pg.ptrs[i]]
 		}
 		leftPage.header.numOfPtr = splitIndex
-		pg.ptrs = pg.ptrs[splitIndex:]
-		pg.header.numOfPtr -= splitIndex
-	} else if !pg.header.isLeaf && pg.header.numOfPtr > MaxDegree {
-		// ページがnon leafの時にはrightmost ptrが有効になることによって
-		// 分割の動作と分割条件が異なる
-		splitted = true
-		splitIndex := pg.header.numOfPtr / 2
-		splitKey = pg.cells[pg.ptrs[splitIndex]].(KeyCell).key
-		leftPage := newNonLeafPage()
-		blk := newUniqueBlockId()
-		ptb.set(blk, leftPage)
-		ptb.pin(blk)
-		leftPageIndex = blk.blockNum
-		leftPage.ptrs = make([]uint32, splitIndex-1)
-		leftPage.cells = make([]Cell, splitIndex)
-		for i := 0; i < int(splitIndex-1); i++ {
-			leftPage.ptrs[i] = uint32(i)
-			leftPage.cells[i] = pg.cells[pg.ptrs[i]]
+		if !pg.header.isLeaf {
+			leftPage.header.rightmostPtr = splitIndex - 1
 		}
-		leftPage.header.rightmostPtr = splitIndex - 1
-		leftPage.cells[splitIndex-1] = pg.cells[pg.ptrs[splitIndex-1]]
-		leftPage.header.numOfPtr = splitIndex
 		pg.ptrs = pg.ptrs[splitIndex:]
 		pg.header.numOfPtr -= splitIndex
 	} else {

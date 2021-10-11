@@ -4,6 +4,7 @@ import "encoding/binary"
 
 type Cell interface {
 	getSize() uint32
+	getKey() int32
 	toBytes() []byte
 	fromBytes([]byte) Cell
 }
@@ -46,6 +47,10 @@ func (cell KeyCell) getSize() uint32 {
 	return KeyCellSize
 }
 
+func (cell KeyCell) getKey() int32 {
+	return cell.key
+}
+
 func (cell KeyCell) toBytes() []byte {
 	buf := make([]byte, cell.getSize())
 	binary.BigEndian.PutUint32(buf[:IntSize], uint32(cell.key))
@@ -66,6 +71,10 @@ type KeyValueCell struct {
 
 func (cell KeyValueCell) getSize() uint32 {
 	return cell.rec.getSize() + IntSize
+}
+
+func (cell KeyValueCell) getKey() int32 {
+	return cell.key
 }
 
 func (cell KeyValueCell) toBytes() []byte {
