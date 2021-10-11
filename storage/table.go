@@ -125,7 +125,6 @@ func (t *Table) addRecord(rec Record) {
 		ptb.unpin(t.rootBlk)
 	} else {
 		splitted, splitKey, leftPageIndex := rootPage.addRecordRec(rec)
-		t.Viz("mid")
 		if splitted {
 			newRootPage := newPage(false)
 			blk := newUniqueBlockId()
