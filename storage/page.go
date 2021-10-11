@@ -165,7 +165,11 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 	if pg.needSplit() {
 		splitted = true
 		splitIndex := pg.header.numOfPtr / 2
-		splitKey = pg.cells[pg.ptrs[splitIndex]].getKey()
+		if pg.header.isLeaf {
+			splitKey = pg.cells[pg.ptrs[splitIndex]].getKey()
+		} else {
+			splitKey = pg.cells[pg.ptrs[splitIndex-1]].getKey()
+		}
 		leftPage := newPage(pg.header.isLeaf)
 		blk := newUniqueBlockId()
 		ptb.set(blk, leftPage)

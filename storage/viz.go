@@ -32,8 +32,14 @@ func (t *Table) Viz(fname string) {
 		curPageIndex := uint32(pageQueue.Pop())
 		curPage := ptb.read(newBlockId(curPageIndex))
 		parentIndex := parentMap[curPageIndex]
-
-		c, err := graph.CreateNode(strconv.Itoa(int(curPageIndex)))
+		str := strconv.Itoa(int(curPageIndex)) + ", key:"
+		for _, ptr := range curPage.ptrs {
+			str += strconv.Itoa(int(curPage.cells[ptr].getKey())) + ", "
+		}
+		if !curPage.header.isLeaf {
+			str += strconv.Itoa(int(curPage.cells[curPage.header.rightmostPtr].getKey()))
+		}
+		c, err := graph.CreateNode(str)
 		if err != nil {
 			log.Fatal(err)
 		}
