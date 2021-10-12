@@ -200,11 +200,9 @@ func (t *Table) Update(prColName string, prVal interface{}, targetColName string
 		panic(errors.New("the type of a column is not implemented"))
 	}
 	prKey := int32(binary.BigEndian.Uint32(buf[:IntSize]))
-	fmt.Println(prKey)
 	curBlk := t.rootBlk
 	curPage := rootPage
 	for !curPage.header.isLeaf {
-		fmt.Println(curBlk.blockNum)
 		idx := curPage.locateLocally(prKey)
 		var childBlkId uint32
 		if idx == curPage.header.numOfPtr {
@@ -217,8 +215,6 @@ func (t *Table) Update(prColName string, prVal interface{}, targetColName string
 		ptb.unpin(curBlk)
 		curBlk = childBlk
 		curPage = childPage
-		fmt.Println(curBlk.blockNum)
-
 	}
 
 	// レコードの書き換え
