@@ -110,6 +110,7 @@ func (pg *Page) locateLocally(key int32) uint32 {
 	}
 	return pg.header.numOfPtr
 }
+
 func insertInt(index int, item uint32, arr []uint32) []uint32 {
 	arr = append(arr, 0)
 	copy(arr[index+1:], arr[index:])

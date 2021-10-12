@@ -107,7 +107,6 @@ func (t *Table) AddColumn(name string, ty Type) {
 	}
 	t.cols = append(t.cols, Column{ty: ty, name: name, pos: pos})
 	t.metaPage.cols = append(t.cols, Column{ty: ty, name: name, pos: pos})
-
 }
 
 func (t *Table) addRecord(rec Record) {
@@ -175,6 +174,90 @@ func (t *Table) Add(args ...interface{}) error {
 	}
 	t.addRecord(Record{size: uint32(len(bytes)), data: bytes})
 	return nil
+}
+
+func (t *Table) Update(prColName string, prVal interface{}, targetColName string, replaceTo interface{}) {
+	rootPage := ptb.pin(t.rootBlk)
+	if rootPage.header.numOfPtr == 0 {
+		panic(errors.New("unexpected"))
+	}
+
+	//　該当レコードを検索
+	if prColName != t.cols[0].name {
+		panic(errors.New("input col is nor primary"))
+	}
+
+	// キーの計算
+	col := t.cols[0]
+	buf := make([]byte, col.ty.size)
+	if col.ty.id == integerId {
+		val := uint32(prVal.(int))
+		binary.BigEndian.PutUint32(buf, val)
+	} else if col.ty.id == charId {
+		rd := strings.NewReader(prVal.(string))
+		rd.Read(buf)
+	} else {
+		panic(errors.New("the type of a column is not implemented"))
+	}
+	prKey := int32(binary.BigEndian.Uint32(buf[:IntSize]))
+	curBlk := t.rootBlk
+	curPage := rootPage
+	for !curPage.header.isLeaf {
+		idx := curPage.locateLocally(prKey)
+		var childBlkId uint32
+		if idx == curPage.header.numOfPtr {
+			childBlkId = curPage.cells[curPage.header.rightmostPtr].(KeyCell).pageIndex
+		} else {
+			childBlkId = curPage.cells[curPage.ptrs[idx]].(KeyCell).pageIndex
+		}
+		childBlk := newBlockId(childBlkId)
+		childPage := ptb.pin(childBlk)
+		ptb.unpin(curBlk)
+		curBlk = childBlk
+		curPage = childPage
+	}
+
+	// レコードの書き換え
+	// 対象のカラムを検索
+	targetColIndex := -1
+	for i, c := range t.cols {
+		if c.name == targetColName {
+			targetColIndex = i
+		}
+	}
+	if targetColIndex == 0 {
+		panic(errors.New("cannot update primary key"))
+	}
+	if targetColIndex == -1 {
+		panic(errors.New("invalid target column name"))
+	}
+
+	targetCol := t.cols[targetColIndex]
+
+	// 該当レコードを取得
+	ptrIdx := curPage.locateLocally(prKey)
+	if ptrIdx == 0 {
+		// locate locallyにおいてleaf Nodeの倍に key <= comparedにすればここはいらなくなる?
+		// ただしページ分割なども修正する必要あり
+		panic(errors.New("key not found"))
+	}
+	cellIdx := curPage.ptrs[ptrIdx-1]
+	if curPage.cells[cellIdx].getKey() != prKey {
+		panic(errors.New("key not found"))
+	}
+	// レコードを抜き出す
+	rec := curPage.cells[cellIdx].(KeyValueCell).rec
+	replaceBuf := make([]byte, col.ty.size)
+	if targetCol.ty.id == integerId {
+		val := uint32(replaceTo.(int))
+		binary.BigEndian.PutUint32(replaceBuf, val)
+	} else if targetCol.ty.id == charId {
+		rd := strings.NewReader(replaceTo.(string))
+		rd.Read(replaceBuf)
+	}
+	copy(rec.data[targetCol.pos:targetCol.pos+targetCol.ty.size], replaceBuf)
+
+	curPage.cells[cellIdx] = KeyValueCell{key: rec.getKey(), rec: rec}
 }
 
 func (t *Table) selectInt(col Column) (res []interface{}, err error) {
