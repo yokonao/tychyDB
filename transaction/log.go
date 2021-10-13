@@ -97,12 +97,12 @@ func newUniqueLog(txnId uint32, logType uint32) *Log {
 }
 
 func (log *Log) info() {
-	fmt.Printf("%d, %d, %d", log.txnId, log.lsn, log.logType)
+	fmt.Printf("%7d, %7d, %7d, ", log.txnId, log.lsn, log.logType)
 	if log.logType == UPDATE {
 		u := log.updateInfo
-		fmt.Printf("%d, %d, %d, %b, %b", u.pageIdx, u.ptrIdx, u.colNum, u.from, u.to)
+		fmt.Printf("%7d, %7d, %7d, %7b, %7b", u.pageIdx, u.ptrIdx, u.colNum, u.from, u.to)
 	} else {
-		fmt.Printf("_, _, _, _, _")
+		fmt.Printf("       ,        ,        ,         ,        ")
 	}
 	fmt.Print("\n")
 }
