@@ -10,7 +10,7 @@ import (
 	"github.com/tychyDB/transaction"
 )
 
-var fm = newFileMgr()
+var fm = NewFileMgr("testfile")
 var bm = newBufferMgr()
 var ptb = newPageTable()
 
@@ -71,7 +71,7 @@ func NewTable() Table {
 	if metaBlk.blockNum != 0 {
 		panic(errors.New("Place a meta page at the top of the file."))
 	}
-	fm.write(metaBlk, t.metaPage.toBytes())
+	fm.Write(metaBlk, t.metaPage.toBytes())
 
 	// rootノード
 	root := newPage(false)
@@ -87,7 +87,7 @@ func NewTableFromFIle() Table {
 	if blk.blockNum != 0 {
 		panic(errors.New("expect 0"))
 	}
-	_, bytes := fm.read(blk)
+	_, bytes := fm.Read(blk)
 	t.metaPage = newMetaPageFromBytes(bytes)
 	t.rootBlk = t.metaPage.rootBlk
 	t.cols = t.metaPage.cols
@@ -96,7 +96,7 @@ func NewTableFromFIle() Table {
 
 func (t *Table) Flush() {
 	ptb.flush()
-	fm.write(t.metaPage.metaBlk, t.metaPage.toBytes())
+	fm.Write(t.metaPage.metaBlk, t.metaPage.toBytes())
 }
 
 func (t *Table) AddColumn(name string, ty Type) {

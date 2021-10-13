@@ -33,7 +33,7 @@ func (ptb *PageTable) flush() {
 		curBlk := newBlockId(uint32(curBlkNum))
 		curBuffId := ptb.table[int(curBlkNum)]
 		delete(ptb.table, int(curBlkNum))
-		fm.write(curBlk, bm.pool[curBuffId].page().toBytes())
+		fm.Write(curBlk, bm.pool[curBuffId].page().toBytes())
 		bm.pool[curBuffId] = nil
 
 	}
@@ -65,7 +65,7 @@ func (ptb *PageTable) makeSpace() {
 				ptb.queue.Push(dropBlkNum)
 			} else {
 				delete(ptb.table, int(dropBlkNum))
-				fm.write(dropBlk, bm.pool[dropBuffId].page().toBytes())
+				fm.Write(dropBlk, bm.pool[dropBuffId].page().toBytes())
 				bm.pool[dropBuffId] = nil
 				break
 			}
@@ -193,7 +193,7 @@ func (bm *BufferMgr) allocate(buff *Buffer) int {
 }
 
 func (bm *BufferMgr) load(blk BlockId) int {
-	n, bytes := fm.read(blk)
+	n, bytes := fm.Read(blk)
 	if n == 0 {
 		panic(errors.New("invalid BlockId was selected"))
 	}
