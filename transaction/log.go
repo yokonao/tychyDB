@@ -3,6 +3,8 @@ package transaction
 import (
 	"errors"
 	"fmt"
+
+	"github.com/tychyDB/storage"
 )
 
 var UniqueLsn uint32
@@ -21,13 +23,15 @@ func init() {
 }
 
 type LogMgr struct {
+	fm         storage.FileMgr
 	flashedLSN uint32
 	logPool    []*Log
 	logCount   uint32
 }
 
-func NewLogMgr() *LogMgr {
+func NewLogMgr(fm storage.FileMgr) *LogMgr {
 	logMgr := LogMgr{}
+	logMgr.fm = fm
 	logMgr.flashedLSN = 0
 	logMgr.logPool = make([]*Log, MaxLogPoolSize)
 	logMgr.logCount = 0

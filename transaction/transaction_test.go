@@ -40,9 +40,10 @@ func createTable(t *testing.T) {
 func TestTxn(t *testing.T) {
 	createTable(t)
 	storage.Reset()
+	logfm := storage.NewFileMgr("logfile")
+
 	tb := storage.NewTableFromFIle()
-	tb.Viz("hoge")
-	lm := transaction.NewLogMgr()
+	lm := transaction.NewLogMgr(*logfm)
 	txn := transaction.NewTransaction(lm)
 	txn.Begin()
 	updateInfo := tb.Update("hoge", 2, "fuga", 33)
