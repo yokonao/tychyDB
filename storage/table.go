@@ -70,7 +70,7 @@ func NewTable() Table {
 
 	metaBlk := newUniqueBlockId()
 	t.metaPage = newMetaPage(metaBlk)
-	if metaBlk.blockNum != 0 {
+	if metaBlk.BlockNum != 0 {
 		panic(errors.New("place a meta page at the top of the file"))
 	}
 	fm.Write(metaBlk, t.metaPage.toBytes())
@@ -86,7 +86,7 @@ func NewTable() Table {
 func NewTableFromFIle() Table {
 	t := Table{}
 	blk := newUniqueBlockId()
-	if blk.blockNum != 0 {
+	if blk.BlockNum != 0 {
 		panic(errors.New("expect 0"))
 	}
 	_, bytes := fm.Read(blk)
@@ -119,7 +119,7 @@ func (tb *Table) addRecord(rec Record) {
 		pg := newPage(true)
 		blk := newUniqueBlockId()
 		ptb.set(blk, pg)
-		rootPage.cells = append(rootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: blk.blockNum})
+		rootPage.cells = append(rootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: blk.BlockNum})
 		rootPage.header.rightmostPtr = 0
 		rootPage.header.numOfPtr++
 		pg.ptrs = append(pg.ptrs, 0)
@@ -135,7 +135,7 @@ func (tb *Table) addRecord(rec Record) {
 			ptb.pin(blk)
 			newRootPage.header.rightmostPtr = 0
 			newRootPage.ptrs = append(newRootPage.ptrs, 1)
-			newRootPage.cells = append(newRootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: tb.rootBlk.blockNum})
+			newRootPage.cells = append(newRootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: tb.rootBlk.BlockNum})
 			newRootPage.cells = append(newRootPage.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
 			newRootPage.header.numOfPtr += 2
 			tb.rootBlk = blk
@@ -284,7 +284,7 @@ func (tb *Table) Update(prColName string, prVal interface{}, targetColName strin
 	curPage.cells[cellIdx] = KeyValueCell{key: rec.getKey(), rec: rec}
 
 	// UpdateInfoの作成
-	updateInfo := NewUpdateInfo(curBlk.blockNum, ptrIdx, uint32(targetColIndex), fromBuf, toBuf)
+	updateInfo := NewUpdateInfo(curBlk.BlockNum, ptrIdx, uint32(targetColIndex), fromBuf, toBuf)
 	return updateInfo
 }
 
@@ -293,7 +293,7 @@ func (tb *Table) selectInt(col Column) (res []interface{}, err error) {
 		return nil, errors.New("you must specify int type column")
 	}
 	pageQueue := NewQueue(64)
-	pageQueue.Push(int(tb.rootBlk.blockNum))
+	pageQueue.Push(int(tb.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
 		curPage := ptb.read(newBlockId(curPageIndex))
@@ -319,7 +319,7 @@ func (tb *Table) selectChar(col Column) (res []interface{}, err error) {
 		return nil, errors.New("you must specify int type column")
 	}
 	pageQueue := NewQueue(64)
-	pageQueue.Push(int(tb.rootBlk.blockNum))
+	pageQueue.Push(int(tb.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
 		curPage := ptb.read(newBlockId(curPageIndex))
@@ -389,7 +389,7 @@ func (tb *Table) Select(names ...string) (res [][]interface{}, err error) {
 func (tb *Table) Print() {
 	fmt.Println("--- start table print ---")
 	pageQueue := NewQueue(64)
-	pageQueue.Push(int(tb.rootBlk.blockNum))
+	pageQueue.Push(int(tb.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
 		curPage := ptb.read(newBlockId(curPageIndex))

@@ -8,6 +8,7 @@ import (
 )
 
 var UniqueLsn uint32
+var UniqueLogPageNumber uint32
 
 const MaxLogPoolSize = 100
 
@@ -20,6 +21,7 @@ const (
 
 func init() {
 	UniqueLsn = 0
+	UniqueLogPageNumber = 0
 }
 
 type LogMgr struct {

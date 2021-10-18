@@ -175,7 +175,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		blk := newUniqueBlockId()
 		ptb.set(blk, leftPage)
 		ptb.pin(blk)
-		leftPageIndex = blk.blockNum
+		leftPageIndex = blk.BlockNum
 		leftPage.ptrs = make([]uint32, splitIndex)
 		leftPage.cells = make([]Cell, splitIndex)
 		for i := 0; i < int(splitIndex); i++ {

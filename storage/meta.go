@@ -33,7 +33,7 @@ func newMetaPageFromBytes(bytes []byte) *MetaPage {
 
 func (pg *MetaPage) toBytes() []byte {
 	buf := make([]byte, PageSize)
-	binary.BigEndian.PutUint32(buf[:IntSize], pg.rootBlk.blockNum)
+	binary.BigEndian.PutUint32(buf[:IntSize], pg.rootBlk.BlockNum)
 	binary.BigEndian.PutUint32(buf[IntSize:2*IntSize], UniqueBlockId)
 
 	binary.BigEndian.PutUint32(buf[2*IntSize:3*IntSize], uint32(len(pg.cols)))

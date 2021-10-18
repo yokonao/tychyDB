@@ -1,7 +1,5 @@
 package storage
 
-import "errors"
-
 var UniqueBlockId uint32
 
 func init() {
@@ -9,21 +7,18 @@ func init() {
 }
 
 type BlockId struct {
-	blockNum uint32
+	BlockNum uint32
 }
 
 func newBlockId(blockNum uint32) BlockId {
-	if blockNum >= UniqueBlockId {
-		panic(errors.New("input blockNum is too large"))
-	}
 	blk := BlockId{}
-	blk.blockNum = blockNum
+	blk.BlockNum = blockNum
 	return blk
 }
 
 func newUniqueBlockId() BlockId {
 	blk := BlockId{}
-	blk.blockNum = UniqueBlockId
+	blk.BlockNum = UniqueBlockId
 	UniqueBlockId++
 	return blk
 
