@@ -18,7 +18,7 @@ func newMetaPageFromBytes(bytes []byte) *MetaPage {
 	pg := &MetaPage{}
 	rootBlockId := binary.BigEndian.Uint32(bytes[:IntSize])
 	UniqueBlockId = binary.BigEndian.Uint32(bytes[IntSize : 2*IntSize])
-	pg.rootBlk = newBlockId(rootBlockId)
+	pg.rootBlk = NewBlockId(rootBlockId)
 
 	lencols := binary.BigEndian.Uint32(bytes[2*IntSize : 3*IntSize])
 	cur := 3 * IntSize

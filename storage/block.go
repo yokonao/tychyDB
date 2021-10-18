@@ -10,7 +10,7 @@ type BlockId struct {
 	BlockNum uint32
 }
 
-func newBlockId(blockNum uint32) BlockId {
+func NewBlockId(blockNum uint32) BlockId {
 	blk := BlockId{}
 	blk.BlockNum = blockNum
 	return blk

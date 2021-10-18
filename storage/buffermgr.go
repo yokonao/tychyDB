@@ -30,7 +30,7 @@ func (ptb *PageTable) flush() {
 			break
 		}
 		curBlkNum := ptb.queue.Pop()
-		curBlk := newBlockId(uint32(curBlkNum))
+		curBlk := NewBlockId(uint32(curBlkNum))
 		curBuffId := ptb.table[int(curBlkNum)]
 		delete(ptb.table, int(curBlkNum))
 		fm.Write(curBlk, bm.pool[curBuffId].page().toBytes())
@@ -54,7 +54,7 @@ func (ptb *PageTable) makeSpace() {
 	for {
 		//ptb.Print()
 		dropBlkNum := ptb.queue.Pop()
-		dropBlk := newBlockId(uint32(dropBlkNum))
+		dropBlk := NewBlockId(uint32(dropBlkNum))
 		dropBuffId := ptb.table[int(dropBlkNum)]
 		dropBuff := bm.pool[dropBuffId]
 		if dropBuff.pin {
