@@ -30,7 +30,6 @@ func (s *Stack) Push(x int) {
 	}
 	s.b[s.t] = x
 	s.t += 1
-	return
 }
 
 func (s *Stack) Pop() (res int) {
