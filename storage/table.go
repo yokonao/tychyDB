@@ -96,25 +96,25 @@ func NewTableFromFIle() Table {
 	return t
 }
 
-func (t *Table) Flush() {
+func (tb *Table) Flush() {
 	ptb.flush()
-	fm.Write(t.metaPage.metaBlk, t.metaPage.toBytes())
+	fm.Write(tb.metaPage.metaBlk, tb.metaPage.toBytes())
 }
 
-func (t *Table) AddColumn(name string, ty Type) {
+func (tb *Table) AddColumn(name string, ty Type) {
 	var pos uint32
-	if len(t.cols) == 0 {
+	if len(tb.cols) == 0 {
 		pos = 0
 	} else {
-		last := t.cols[len(t.cols)-1]
+		last := tb.cols[len(tb.cols)-1]
 		pos = last.pos + last.ty.size
 	}
-	t.cols = append(t.cols, Column{ty: ty, name: name, pos: pos})
-	t.metaPage.cols = append(t.cols, Column{ty: ty, name: name, pos: pos})
+	tb.cols = append(tb.cols, Column{ty: ty, name: name, pos: pos})
+	tb.metaPage.cols = append(tb.cols, Column{ty: ty, name: name, pos: pos})
 }
 
-func (t *Table) addRecord(rec Record) {
-	rootPage := ptb.pin(t.rootBlk)
+func (tb *Table) addRecord(rec Record) {
+	rootPage := ptb.pin(tb.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		pg := newPage(true)
 		blk := newUniqueBlockId()
@@ -125,7 +125,7 @@ func (t *Table) addRecord(rec Record) {
 		pg.ptrs = append(pg.ptrs, 0)
 		pg.cells = append(pg.cells, KeyValueCell{key: rec.getKey(), rec: rec})
 		pg.header.numOfPtr++
-		ptb.unpin(t.rootBlk)
+		ptb.unpin(tb.rootBlk)
 	} else {
 		splitted, splitKey, leftPageIndex := rootPage.addRecordRec(rec)
 		if splitted {
@@ -135,13 +135,13 @@ func (t *Table) addRecord(rec Record) {
 			ptb.pin(blk)
 			newRootPage.header.rightmostPtr = 0
 			newRootPage.ptrs = append(newRootPage.ptrs, 1)
-			newRootPage.cells = append(newRootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: t.rootBlk.blockNum})
+			newRootPage.cells = append(newRootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: tb.rootBlk.blockNum})
 			newRootPage.cells = append(newRootPage.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
 			newRootPage.header.numOfPtr += 2
-			t.rootBlk = blk
-			t.metaPage.rootBlk = blk
+			tb.rootBlk = blk
+			tb.metaPage.rootBlk = blk
 		}
-		ptb.unpin(t.rootBlk)
+		ptb.unpin(tb.rootBlk)
 	}
 }
 
@@ -171,12 +171,12 @@ func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
 	return
 }
 
-func (t *Table) Add(args ...interface{}) error {
-	bytes, err := encode(t.cols, args...)
+func (tb *Table) Add(args ...interface{}) error {
+	bytes, err := encode(tb.cols, args...)
 	if err != nil {
 		return err
 	}
-	t.addRecord(Record{size: uint32(len(bytes)), data: bytes})
+	tb.addRecord(Record{size: uint32(len(bytes)), data: bytes})
 	return nil
 }
 
@@ -198,19 +198,19 @@ func NewUpdateInfo(pageIdx uint32, ptrIdx uint32, colNum uint32, from []byte, to
 	return info
 }
 
-func (t *Table) Update(prColName string, prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {
-	rootPage := ptb.pin(t.rootBlk)
+func (tb *Table) Update(prColName string, prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {
+	rootPage := ptb.pin(tb.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		panic(errors.New("unexpected"))
 	}
 
 	//　該当レコードを検索
-	if prColName != t.cols[0].name {
+	if prColName != tb.cols[0].name {
 		panic(errors.New("input col is nor primary"))
 	}
 
 	// キーの計算
-	col := t.cols[0]
+	col := tb.cols[0]
 	buf := make([]byte, col.ty.size)
 	if col.ty.id == integerId {
 		val := uint32(prVal.(int))
@@ -222,7 +222,7 @@ func (t *Table) Update(prColName string, prVal interface{}, targetColName string
 		panic(errors.New("the type of a column is not implemented"))
 	}
 	prKey := int32(binary.BigEndian.Uint32(buf[:IntSize]))
-	curBlk := t.rootBlk
+	curBlk := tb.rootBlk
 	curPage := rootPage
 	for !curPage.header.isLeaf {
 		idx := curPage.locateLocally(prKey)
@@ -242,7 +242,7 @@ func (t *Table) Update(prColName string, prVal interface{}, targetColName string
 	// レコードの書き換え
 	// 対象のカラムを検索
 	targetColIndex := -1
-	for i, c := range t.cols {
+	for i, c := range tb.cols {
 		if c.name == targetColName {
 			targetColIndex = i
 		}
@@ -254,7 +254,7 @@ func (t *Table) Update(prColName string, prVal interface{}, targetColName string
 		panic(errors.New("invalid target column name"))
 	}
 
-	targetCol := t.cols[targetColIndex]
+	targetCol := tb.cols[targetColIndex]
 
 	// 該当レコードを取得
 	ptrIdx := curPage.locateLocally(prKey)
@@ -288,12 +288,12 @@ func (t *Table) Update(prColName string, prVal interface{}, targetColName string
 	return updateInfo
 }
 
-func (t *Table) selectInt(col Column) (res []interface{}, err error) {
+func (tb *Table) selectInt(col Column) (res []interface{}, err error) {
 	if col.ty.id != integerId {
 		return nil, errors.New("you must specify int type column")
 	}
 	pageQueue := NewQueue(64)
-	pageQueue.Push(int(t.rootBlk.blockNum))
+	pageQueue.Push(int(tb.rootBlk.blockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
 		curPage := ptb.read(newBlockId(curPageIndex))
@@ -313,13 +313,13 @@ func (t *Table) selectInt(col Column) (res []interface{}, err error) {
 	return
 }
 
-func (t *Table) selectChar(col Column) (res []interface{}, err error) {
+func (tb *Table) selectChar(col Column) (res []interface{}, err error) {
 
 	if col.ty.id != charId {
 		return nil, errors.New("you must specify int type column")
 	}
 	pageQueue := NewQueue(64)
-	pageQueue.Push(int(t.rootBlk.blockNum))
+	pageQueue.Push(int(tb.rootBlk.blockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
 		curPage := ptb.read(newBlockId(curPageIndex))
@@ -341,21 +341,21 @@ func (t *Table) selectChar(col Column) (res []interface{}, err error) {
 	return
 }
 
-func (t *Table) Select(names ...string) (res [][]interface{}, err error) {
+func (tb *Table) Select(names ...string) (res [][]interface{}, err error) {
 	for _, name := range names {
-		for _, col := range t.cols {
+		for _, col := range tb.cols {
 			if name != col.name {
 				continue
 			}
 			if col.ty.id == integerId {
-				values, err := t.selectInt(col)
+				values, err := tb.selectInt(col)
 				if err != nil {
 					return nil, err
 				}
 				res = append(res, values)
 				break
 			} else if col.ty.id == charId {
-				values, err := t.selectChar(col)
+				values, err := tb.selectChar(col)
 				if err != nil {
 					return nil, err
 				}
@@ -386,10 +386,10 @@ func (t *Table) Select(names ...string) (res [][]interface{}, err error) {
 	return res, nil
 }
 
-func (t *Table) Print() {
+func (tb *Table) Print() {
 	fmt.Println("--- start table print ---")
 	pageQueue := NewQueue(64)
-	pageQueue.Push(int(t.rootBlk.blockNum))
+	pageQueue.Push(int(tb.rootBlk.blockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
 		curPage := ptb.read(newBlockId(curPageIndex))
