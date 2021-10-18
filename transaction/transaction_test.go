@@ -51,3 +51,23 @@ func TestTxn(t *testing.T) {
 	txn.Commit()
 	lm.Print()
 }
+
+func TestLogSerializeDeSerialize(t *testing.T) {
+	createTable(t)
+	storage.Reset()
+	logfm := storage.NewFileMgr("logfile")
+
+	tb := storage.NewTableFromFIle()
+	lm := transaction.NewLogMgr(*logfm)
+	txn := transaction.NewTransaction(lm)
+	txn.Begin()
+	updateInfo := tb.Update("hoge", 2, "fuga", 33)
+	txn.Update(updateInfo)
+	txn.Commit()
+
+	lm.Print()
+	// test log manager serialize deserialize
+	bytes := lm.LogPage.ToBytes()
+	newlm := transaction.NewLogPageFromBytes(bytes)
+	newlm.Print()
+}

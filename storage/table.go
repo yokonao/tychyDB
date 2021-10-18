@@ -198,6 +198,21 @@ func NewUpdateInfo(pageIdx uint32, ptrIdx uint32, colNum uint32, from []byte, to
 	return info
 }
 
+func (uinfo *UpdateInfo) ToBytes() []byte {
+	// 先頭にデータの長さを格納する
+	buf := make([]byte, 6*IntSize)
+	binary.BigEndian.PutUint32(buf[IntSize:2*IntSize], uinfo.PageIdx)
+	binary.BigEndian.PutUint32(buf[2*IntSize:3*IntSize], uinfo.PtrIdx)
+	binary.BigEndian.PutUint32(buf[3*IntSize:4*IntSize], uinfo.ColNum)
+
+	binary.BigEndian.PutUint32(buf[4*IntSize:5*IntSize], uint32(len(uinfo.From)))
+	binary.BigEndian.PutUint32(buf[5*IntSize:6*IntSize], uint32(len(uinfo.To)))
+	buf = append(buf, uinfo.From...)
+	buf = append(buf, uinfo.To...)
+	binary.BigEndian.PutUint32(buf[:IntSize], uint32(len(buf)))
+	return buf
+}
+
 func (tb *Table) Update(prColName string, prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {
 	rootPage := ptb.pin(tb.rootBlk)
 	if rootPage.header.numOfPtr == 0 {

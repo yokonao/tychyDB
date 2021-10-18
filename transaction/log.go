@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 
@@ -27,16 +28,14 @@ func init() {
 type LogMgr struct {
 	fm         storage.FileMgr
 	flashedLSN uint32
-	logPool    []*Log
-	logCount   uint32
+	LogPage    *LogPage // use UpperCase for test
 }
 
 func NewLogMgr(fm storage.FileMgr) *LogMgr {
 	logMgr := LogMgr{}
 	logMgr.fm = fm
 	logMgr.flashedLSN = 0
-	logMgr.logPool = make([]*Log, MaxLogPoolSize)
-	logMgr.logCount = 0
+	logMgr.LogPage = newLogPage()
 	return &logMgr
 }
 
@@ -48,8 +47,7 @@ func getUniqueLSN() uint32 {
 
 func (lm *LogMgr) addLog(txnId, logType uint32) {
 	log := newUniqueLog(txnId, logType)
-	lm.logPool[lm.logCount] = log
-	lm.logCount++
+	lm.LogPage.addLog(log)
 }
 
 func (lm *LogMgr) addLogForUpdate(txnId, logType uint32, updateInfo storage.UpdateInfo) {
@@ -58,15 +56,11 @@ func (lm *LogMgr) addLogForUpdate(txnId, logType uint32, updateInfo storage.Upda
 	}
 	log := newUniqueLog(txnId, UPDATE)
 	log.updateInfo = updateInfo
-	lm.logPool[lm.logCount] = log
-	lm.logCount++
+	lm.LogPage.addLog(log)
 }
 
 func (lm *LogMgr) Print() {
-	fmt.Println("txnId  ,     lsn, logType, pageIdx,  ptrIdx,   colNum,    from,      to")
-	for i := 0; i < int(lm.logCount); i++ {
-		lm.logPool[i].info()
-	}
+	lm.LogPage.Print()
 }
 
 type Log struct {
@@ -82,6 +76,19 @@ func newUniqueLog(txnId uint32, logType uint32) *Log {
 	log.lsn = getUniqueLSN()
 	log.logType = logType
 	return log
+}
+
+func (log *Log) toBytes() []byte {
+	buf := make([]byte, 4*IntSize)
+	binary.BigEndian.PutUint32(buf[IntSize:2*IntSize], log.txnId)
+	binary.BigEndian.PutUint32(buf[2*IntSize:3*IntSize], log.lsn)
+	binary.BigEndian.PutUint32(buf[3*IntSize:4*IntSize], log.logType)
+	if log.logType == UPDATE {
+		uinfoBuf := log.updateInfo.ToBytes()
+		buf = append(buf, uinfoBuf...)
+	}
+	binary.BigEndian.PutUint32(buf[:IntSize], uint32(len(buf)))
+	return buf
 }
 
 func (log *Log) info() {
