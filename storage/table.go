@@ -69,7 +69,7 @@ func NewTable() Table {
 	metaBlk := newUniqueBlockId()
 	t.metaPage = newMetaPage(metaBlk)
 	if metaBlk.blockNum != 0 {
-		panic(errors.New("Place a meta page at the top of the file."))
+		panic(errors.New("place a meta page at the top of the file"))
 	}
 	fm.Write(metaBlk, t.metaPage.toBytes())
 
