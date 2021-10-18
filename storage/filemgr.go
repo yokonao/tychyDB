@@ -19,6 +19,11 @@ func NewFileMgr(fileName string) *FileMgr {
 	}
 }
 
+func (fm *FileMgr) Clean() {
+	diskDir := os.Getenv("DISK")
+	os.Remove(diskDir + fm.fileName)
+}
+
 func (fm *FileMgr) Write(blk BlockId, bytes []byte) {
 	file, err := os.OpenFile(fm.basePath+fm.fileName, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {

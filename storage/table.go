@@ -6,13 +6,21 @@ import (
 	"fmt"
 	"math"
 	"strings"
-
-	"github.com/tychyDB/transaction"
 )
 
 var fm = NewFileMgr("testfile")
 var bm = newBufferMgr()
 var ptb = newPageTable()
+
+func Clean() {
+	fm.Clean()
+}
+
+func Reset() {
+	UniqueBlockId = 0
+	bm = newBufferMgr()
+	ptb = newPageTable()
+}
 
 type Column struct {
 	ty   Type
@@ -54,12 +62,6 @@ type Table struct {
 	cols     []Column
 	rootBlk  BlockId
 	metaPage *MetaPage
-}
-
-func Reset() {
-	UniqueBlockId = 0
-	bm = newBufferMgr()
-	ptb = newPageTable()
 }
 
 func NewTable() Table {
