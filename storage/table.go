@@ -6,13 +6,21 @@ import (
 	"fmt"
 	"math"
 	"strings"
-
-	"github.com/tychyDB/transaction"
 )
 
-var fm = newFileMgr()
+var fm = NewFileMgr("testfile")
 var bm = newBufferMgr()
 var ptb = newPageTable()
+
+func Clean() {
+	fm.Clean()
+}
+
+func Reset() {
+	UniqueBlockId = 0
+	bm = newBufferMgr()
+	ptb = newPageTable()
+}
 
 type Column struct {
 	ty   Type
@@ -56,12 +64,6 @@ type Table struct {
 	metaPage *MetaPage
 }
 
-func Reset() {
-	UniqueBlockId = 0
-	bm = newBufferMgr()
-	ptb = newPageTable()
-}
-
 func NewTable() Table {
 	t := Table{}
 	// テーブルのメタ情報を置くためのページ
@@ -69,9 +71,9 @@ func NewTable() Table {
 	metaBlk := newUniqueBlockId()
 	t.metaPage = newMetaPage(metaBlk)
 	if metaBlk.blockNum != 0 {
-		panic(errors.New("Place a meta page at the top of the file."))
+		panic(errors.New("place a meta page at the top of the file"))
 	}
-	fm.write(metaBlk, t.metaPage.toBytes())
+	fm.Write(metaBlk, t.metaPage.toBytes())
 
 	// rootノード
 	root := newPage(false)
@@ -87,7 +89,7 @@ func NewTableFromFIle() Table {
 	if blk.blockNum != 0 {
 		panic(errors.New("expect 0"))
 	}
-	_, bytes := fm.read(blk)
+	_, bytes := fm.Read(blk)
 	t.metaPage = newMetaPageFromBytes(bytes)
 	t.rootBlk = t.metaPage.rootBlk
 	t.cols = t.metaPage.cols
@@ -96,7 +98,7 @@ func NewTableFromFIle() Table {
 
 func (t *Table) Flush() {
 	ptb.flush()
-	fm.write(t.metaPage.metaBlk, t.metaPage.toBytes())
+	fm.Write(t.metaPage.metaBlk, t.metaPage.toBytes())
 }
 
 func (t *Table) AddColumn(name string, ty Type) {
@@ -178,7 +180,25 @@ func (t *Table) Add(args ...interface{}) error {
 	return nil
 }
 
-func (t *Table) Update(prColName string, prVal interface{}, targetColName string, replaceTo interface{}) transaction.UpdateInfo {
+type UpdateInfo struct {
+	PageIdx uint32
+	PtrIdx  uint32
+	ColNum  uint32
+	From    []byte
+	To      []byte
+}
+
+func NewUpdateInfo(pageIdx uint32, ptrIdx uint32, colNum uint32, from []byte, to []byte) UpdateInfo {
+	info := UpdateInfo{}
+	info.PageIdx = pageIdx
+	info.PtrIdx = ptrIdx
+	info.ColNum = colNum
+	info.From = from
+	info.To = to
+	return info
+}
+
+func (t *Table) Update(prColName string, prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {
 	rootPage := ptb.pin(t.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		panic(errors.New("unexpected"))
@@ -264,7 +284,7 @@ func (t *Table) Update(prColName string, prVal interface{}, targetColName string
 	curPage.cells[cellIdx] = KeyValueCell{key: rec.getKey(), rec: rec}
 
 	// UpdateInfoの作成
-	updateInfo := transaction.NewUpdateInfo(curBlk.blockNum, ptrIdx, uint32(targetColIndex), fromBuf, toBuf)
+	updateInfo := NewUpdateInfo(curBlk.blockNum, ptrIdx, uint32(targetColIndex), fromBuf, toBuf)
 	return updateInfo
 }
 

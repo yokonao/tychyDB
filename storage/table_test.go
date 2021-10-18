@@ -1,20 +1,13 @@
 package storage_test
 
 import (
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/tychyDB/storage"
 )
 
-func cleanDisk(t *testing.T) {
-	diskDir := os.Getenv("DISK")
-	os.Remove(diskDir + "/testfile")
-}
-
 func createTable(t *testing.T) {
-	cleanDisk(t)
 	storage.Reset()
 
 	tb := storage.NewTable()
@@ -42,7 +35,6 @@ func TestDebug(t *testing.T) {
 }
 
 func TestStorageEasy(t *testing.T) {
-	cleanDisk(t)
 	storage.Reset()
 
 	tb := storage.NewTable()
@@ -57,7 +49,6 @@ func TestStorageEasy(t *testing.T) {
 	tb.Add(-345, 77, 43)
 }
 func TestStorage(t *testing.T) {
-	cleanDisk(t)
 	storage.Reset()
 
 	tb := storage.NewTable()
@@ -108,7 +99,6 @@ func TestStorage(t *testing.T) {
 }
 
 func TestStorageChar(t *testing.T) {
-	cleanDisk(t)
 	storage.Reset()
 
 	countryTable := storage.NewTable()

@@ -5,20 +5,27 @@ import (
 )
 
 type FileMgr struct {
+	fileName  string
 	basePath  string
 	blockSize int64
 }
 
-func newFileMgr() *FileMgr {
+func NewFileMgr(fileName string) *FileMgr {
 	diskDir := os.Getenv("DISK")
 	return &FileMgr{
+		fileName:  fileName,
 		basePath:  diskDir,
 		blockSize: PageSize,
 	}
 }
 
-func (fm *FileMgr) write(blk BlockId, bytes []byte) {
-	file, err := os.OpenFile(fm.basePath+"testfile", os.O_WRONLY|os.O_CREATE, 0644)
+func (fm *FileMgr) Clean() {
+	diskDir := os.Getenv("DISK")
+	os.Remove(diskDir + fm.fileName)
+}
+
+func (fm *FileMgr) Write(blk BlockId, bytes []byte) {
+	file, err := os.OpenFile(fm.basePath+fm.fileName, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -35,8 +42,8 @@ func (fm *FileMgr) write(blk BlockId, bytes []byte) {
 	}
 }
 
-func (fm *FileMgr) read(blk BlockId) (int, []byte) {
-	file, err := os.Open(fm.basePath + "testfile")
+func (fm *FileMgr) Read(blk BlockId) (int, []byte) {
+	file, err := os.Open(fm.basePath + fm.fileName)
 	if err != nil {
 		panic(err)
 	}
