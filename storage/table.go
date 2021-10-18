@@ -180,7 +180,25 @@ func (t *Table) Add(args ...interface{}) error {
 	return nil
 }
 
-func (t *Table) Update(prColName string, prVal interface{}, targetColName string, replaceTo interface{}) transaction.UpdateInfo {
+type UpdateInfo struct {
+	PageIdx uint32
+	PtrIdx  uint32
+	ColNum  uint32
+	From    []byte
+	To      []byte
+}
+
+func NewUpdateInfo(pageIdx uint32, ptrIdx uint32, colNum uint32, from []byte, to []byte) UpdateInfo {
+	info := UpdateInfo{}
+	info.PageIdx = pageIdx
+	info.PtrIdx = ptrIdx
+	info.ColNum = colNum
+	info.From = from
+	info.To = to
+	return info
+}
+
+func (t *Table) Update(prColName string, prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {
 	rootPage := ptb.pin(t.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		panic(errors.New("unexpected"))
@@ -266,7 +284,7 @@ func (t *Table) Update(prColName string, prVal interface{}, targetColName string
 	curPage.cells[cellIdx] = KeyValueCell{key: rec.getKey(), rec: rec}
 
 	// UpdateInfoの作成
-	updateInfo := transaction.NewUpdateInfo(curBlk.blockNum, ptrIdx, uint32(targetColIndex), fromBuf, toBuf)
+	updateInfo := NewUpdateInfo(curBlk.blockNum, ptrIdx, uint32(targetColIndex), fromBuf, toBuf)
 	return updateInfo
 }
 

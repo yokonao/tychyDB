@@ -50,7 +50,7 @@ func (lm *LogMgr) addLog(txnId, logType uint32) {
 	lm.logCount++
 }
 
-func (lm *LogMgr) addLogForUpdate(txnId, logType uint32, updateInfo UpdateInfo) {
+func (lm *LogMgr) addLogForUpdate(txnId, logType uint32, updateInfo storage.UpdateInfo) {
 	if logType != UPDATE {
 		panic(errors.New("log type expected to be UPDATE"))
 	}
@@ -67,29 +67,11 @@ func (lm *LogMgr) Print() {
 	}
 }
 
-type UpdateInfo struct {
-	pageIdx uint32
-	ptrIdx  uint32
-	colNum  uint32
-	from    []byte
-	to      []byte
-}
-
-func NewUpdateInfo(pageIdx uint32, ptrIdx uint32, colNum uint32, from []byte, to []byte) UpdateInfo {
-	info := UpdateInfo{}
-	info.pageIdx = pageIdx
-	info.ptrIdx = ptrIdx
-	info.colNum = colNum
-	info.from = from
-	info.to = to
-	return info
-}
-
 type Log struct {
 	txnId      uint32
 	lsn        uint32
 	logType    uint32
-	updateInfo UpdateInfo
+	updateInfo storage.UpdateInfo
 }
 
 func newUniqueLog(txnId uint32, logType uint32) *Log {
@@ -104,7 +86,7 @@ func (log *Log) info() {
 	fmt.Printf("%7d, %7d, %7d, ", log.txnId, log.lsn, log.logType)
 	if log.logType == UPDATE {
 		u := log.updateInfo
-		fmt.Printf("%7d, %7d, %7d, %7b, %7b", u.pageIdx, u.ptrIdx, u.colNum, u.from, u.to)
+		fmt.Printf("%7d, %7d, %7d, %7b, %7b", u.PageIdx, u.PtrIdx, u.ColNum, u.From, u.To)
 	} else {
 		fmt.Printf("       ,        ,        ,         ,        ")
 	}

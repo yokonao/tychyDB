@@ -1,5 +1,7 @@
 package transaction
 
+import "github.com/tychyDB/storage"
+
 var UniqueTxnId uint32
 
 func init() {
@@ -34,7 +36,7 @@ func (txn *Transaction) Commit() {
 func (txn *Transaction) Abort() {
 	txn.lm.addLog(txn.txnId, ABORT)
 }
-func (txn *Transaction) Update(updateInfo UpdateInfo) {
+func (txn *Transaction) Update(updateInfo storage.UpdateInfo) {
 	txn.lm.addLogForUpdate(txn.txnId, UPDATE, updateInfo)
 }
 
