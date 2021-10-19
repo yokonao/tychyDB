@@ -11,6 +11,7 @@ import (
 func cleanDisk(t *testing.T) {
 	diskDir := os.Getenv("DISK")
 	os.Remove(diskDir + "/testfile")
+	os.Remove(diskDir + "/logfile")
 }
 
 func createTable(t *testing.T) {
@@ -50,4 +51,36 @@ func TestTxn(t *testing.T) {
 	txn.Update(updateInfo)
 	txn.Commit()
 	lm.Print()
+}
+
+func TestLogSerializeDeSerialize(t *testing.T) {
+	createTable(t)
+	storage.Reset()
+	logfm := storage.NewFileMgr("logfile")
+
+	tb := storage.NewTableFromFIle()
+	lm := transaction.NewLogMgr(*logfm)
+	txn := transaction.NewTransaction(lm)
+	txn.Begin()
+	updateInfo := tb.Update("hoge", 2, "fuga", 33)
+	txn.Update(updateInfo)
+	txn.Commit()
+
+	lm.Print()
+	// test log manager serialize deserialize
+	pg := lm.LogPage
+	bytes := pg.ToBytes()
+	newLogPage := transaction.NewLogPageFromBytes(bytes)
+	newLogPage.Print()
+	newBytes := newLogPage.ToBytes()
+
+	if len(bytes) != len(newBytes) {
+		t.Error("byte length mismatch")
+	}
+	for i := 0; i < len(bytes); i++ {
+		if bytes[i] != newBytes[i] {
+			t.Error("byte mismatch")
+		}
+	}
+
 }

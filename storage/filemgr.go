@@ -31,7 +31,7 @@ func (fm *FileMgr) Write(blk BlockId, bytes []byte) {
 	}
 	defer file.Close()
 
-	_, err = file.Seek(int64(blk.blockNum)*fm.blockSize, 0)
+	_, err = file.Seek(int64(blk.BlockNum)*fm.blockSize, 0)
 	if err != nil {
 		panic(err)
 	}
@@ -48,7 +48,7 @@ func (fm *FileMgr) Read(blk BlockId) (int, []byte) {
 		panic(err)
 	}
 	defer file.Close()
-	_, err = file.Seek(int64(blk.blockNum)*fm.blockSize, 0)
+	_, err = file.Seek(int64(blk.BlockNum)*fm.blockSize, 0)
 
 	if err != nil {
 		panic(err)

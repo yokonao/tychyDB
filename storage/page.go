@@ -146,7 +146,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 			cellIndex := pg.ptrs[insert_idx]
 			pageIndex = pg.cells[cellIndex].(KeyCell).pageIndex
 		}
-		blk := newBlockId(pageIndex)
+		blk := NewBlockId(pageIndex)
 
 		splitted, splitKey, leftPageIndex := ptb.pin(blk).addRecordRec(rec)
 		if splitted {
@@ -158,7 +158,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 			pg.ptrs = insertInt(int(insert_idx), uint32(len(pg.cells)), pg.ptrs)
 			pg.cells = append(pg.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
 			pg.header.numOfPtr++
-			ptb.unpin(newBlockId(leftPageIndex))
+			ptb.unpin(NewBlockId(leftPageIndex))
 		}
 		ptb.unpin(blk)
 	}
@@ -175,7 +175,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		blk := newUniqueBlockId()
 		ptb.set(blk, leftPage)
 		ptb.pin(blk)
-		leftPageIndex = blk.blockNum
+		leftPageIndex = blk.BlockNum
 		leftPage.ptrs = make([]uint32, splitIndex)
 		leftPage.cells = make([]Cell, splitIndex)
 		for i := 0; i < int(splitIndex); i++ {

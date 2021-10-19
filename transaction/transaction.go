@@ -33,9 +33,11 @@ func (txn *Transaction) Begin() {
 func (txn *Transaction) Commit() {
 	txn.lm.addLog(txn.txnId, COMMIT)
 }
+
 func (txn *Transaction) Abort() {
 	txn.lm.addLog(txn.txnId, ABORT)
 }
+
 func (txn *Transaction) Update(updateInfo storage.UpdateInfo) {
 	txn.lm.addLogForUpdate(txn.txnId, UPDATE, updateInfo)
 }

@@ -24,13 +24,13 @@ func (t *Table) Viz(fname string) {
 	nodeMap := make(map[uint32]*cgraph.Node)
 	parentMap := make(map[uint32]uint32)
 
-	pageQueue.Push(int(t.rootBlk.blockNum))
+	pageQueue.Push(int(t.rootBlk.BlockNum))
 
-	parentMap[t.rootBlk.blockNum] = t.rootBlk.blockNum
+	parentMap[t.rootBlk.BlockNum] = t.rootBlk.BlockNum
 
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := ptb.read(newBlockId(curPageIndex))
+		curPage := ptb.read(NewBlockId(curPageIndex))
 		parentIndex := parentMap[curPageIndex]
 		str := strconv.Itoa(int(curPageIndex)) + ", key:"
 		for _, ptr := range curPage.ptrs {

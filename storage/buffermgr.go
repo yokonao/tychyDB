@@ -30,7 +30,7 @@ func (ptb *PageTable) flush() {
 			break
 		}
 		curBlkNum := ptb.queue.Pop()
-		curBlk := newBlockId(uint32(curBlkNum))
+		curBlk := NewBlockId(uint32(curBlkNum))
 		curBuffId := ptb.table[int(curBlkNum)]
 		delete(ptb.table, int(curBlkNum))
 		fm.Write(curBlk, bm.pool[curBuffId].page().toBytes())
@@ -54,7 +54,7 @@ func (ptb *PageTable) makeSpace() {
 	for {
 		//ptb.Print()
 		dropBlkNum := ptb.queue.Pop()
-		dropBlk := newBlockId(uint32(dropBlkNum))
+		dropBlk := NewBlockId(uint32(dropBlkNum))
 		dropBuffId := ptb.table[int(dropBlkNum)]
 		dropBuff := bm.pool[dropBuffId]
 		if dropBuff.pin {
@@ -76,14 +76,14 @@ func (ptb *PageTable) makeSpace() {
 }
 
 func (ptb *PageTable) getBuffId(blk BlockId) int {
-	buffId, exists := ptb.table[int(blk.blockNum)]
+	buffId, exists := ptb.table[int(blk.BlockNum)]
 	if exists {
 		return buffId
 	} else {
 		ptb.makeSpace()
-		ptb.queue.Push(int(blk.blockNum))
+		ptb.queue.Push(int(blk.BlockNum))
 		buffId := bm.load(blk)
-		ptb.table[int(blk.blockNum)] = buffId
+		ptb.table[int(blk.BlockNum)] = buffId
 		return buffId
 	}
 }
@@ -98,10 +98,10 @@ func (ptb *PageTable) available() bool {
 
 func (ptb *PageTable) set(blk BlockId, pg *Page) {
 	ptb.makeSpace()
-	ptb.queue.Push(int(blk.blockNum))
+	ptb.queue.Push(int(blk.BlockNum))
 	buff := newBufferFromPage(blk, pg)
 	buffId := bm.allocate(buff)
-	ptb.table[int(blk.blockNum)] = buffId
+	ptb.table[int(blk.BlockNum)] = buffId
 }
 
 func (ptb *PageTable) read(blk BlockId) *Page {
@@ -117,7 +117,7 @@ func (ptb *PageTable) pin(blk BlockId) *Page {
 }
 
 func (ptb *PageTable) unpin(blk BlockId) {
-	buffId, exists := ptb.table[int(blk.blockNum)]
+	buffId, exists := ptb.table[int(blk.BlockNum)]
 	if !exists {
 		panic(errors.New("trying to unpin page not on disk"))
 	}
