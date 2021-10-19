@@ -68,7 +68,19 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 
 	lm.Print()
 	// test log manager serialize deserialize
-	bytes := lm.LogPage.ToBytes()
-	newlm := transaction.NewLogPageFromBytes(bytes)
-	newlm.Print()
+	pg := lm.LogPage
+	bytes := pg.ToBytes()
+	newLogPage := transaction.NewLogPageFromBytes(bytes)
+	newLogPage.Print()
+	newBytes := newLogPage.ToBytes()
+
+	if len(bytes) != len(newBytes) {
+		t.Error("byte length mismatch")
+	}
+	for i := 0; i < len(bytes); i++ {
+		if bytes[i] != newBytes[i] {
+			t.Error("byte mismatch")
+		}
+	}
+
 }
