@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/tychyDB/storage"
+	"github.com/tychyDB/util"
 )
 
 const IntSize = 4 // storageと共通化したい
@@ -27,47 +28,35 @@ func newLogPage(pageNum uint32) *LogPage {
 }
 
 func NewLogPageFromBytes(bytes []byte) *LogPage {
-	blockNum := binary.BigEndian.Uint32(bytes[:IntSize])
+	iter := util.NewIterStruct(0, bytes)
+	blockNum := iter.NextUInt32()
 	blk := storage.NewBlockId(blockNum)
 	pg := &LogPage{}
 	pg.blk = blk
-	if bytes[IntSize] == 0 {
-		pg.isFull = false
-	} else {
-		pg.isFull = true
-	}
-	pg.numLogs = binary.BigEndian.Uint32(bytes[1+IntSize : 1+2*IntSize])
+	pg.isFull = iter.NextBool()
+	pg.numLogs = iter.NextUInt32()
 	pg.logs = make([]*Log, pg.numLogs)
-	cur := 1 + 2*IntSize
-
 	for i := 0; i < int(pg.numLogs); i++ {
-		lenLog := binary.BigEndian.Uint32(bytes[cur : cur+IntSize])
+		iter.NextUInt32() // skip len(Log)
 		log := &Log{}
-		log.txnId = binary.BigEndian.Uint32(bytes[cur+IntSize : cur+2*IntSize])
-		log.lsn = binary.BigEndian.Uint32(bytes[cur+2*IntSize : cur+3*IntSize])
-		log.logType = binary.BigEndian.Uint32(bytes[cur+3*IntSize : cur+4*IntSize])
+		log.txnId = iter.NextUInt32()
+		log.lsn = iter.NextUInt32()
+		log.logType = iter.NextUInt32()
 		if log.logType == UPDATE {
 			// この部分はUpdateInfoにfromBytesを実装して移譲できる
-			uinfohead := cur + 4*IntSize
-			pageIdx := binary.BigEndian.Uint32(bytes[uinfohead+IntSize : uinfohead+2*IntSize])
-			ptrIdx := binary.BigEndian.Uint32(bytes[uinfohead+2*IntSize : uinfohead+3*IntSize])
-			colNum := binary.BigEndian.Uint32(bytes[uinfohead+3*IntSize : uinfohead+4*IntSize])
-			fromLen := binary.BigEndian.Uint32(bytes[uinfohead+4*IntSize : uinfohead+5*IntSize])
-			toLen := binary.BigEndian.Uint32(bytes[uinfohead+5*IntSize : uinfohead+6*IntSize])
-
-			uinfohead += 6 * IntSize
-			from := make([]byte, fromLen)
-			to := make([]byte, toLen)
-			copy(from, bytes[uinfohead:uinfohead+int(fromLen)])
-			uinfohead += int(fromLen)
-			copy(to, bytes[uinfohead:uinfohead+int(toLen)])
-
+			iter.NextUInt32() // skip len(Update Info)
+			pageIdx := iter.NextUInt32()
+			ptrIdx := iter.NextUInt32()
+			colNum := iter.NextUInt32()
+			fromLen := iter.NextUInt32()
+			toLen := iter.NextUInt32()
+			fmt.Println("from ", fromLen, "to ", toLen)
+			from := iter.NextBytes(fromLen)
+			to := iter.NextBytes(toLen)
 			uinfo := storage.NewUpdateInfo(pageIdx, ptrIdx, colNum, from, to)
 			log.updateInfo = uinfo
 		}
-
 		pg.logs[i] = log
-		cur += int(lenLog)
 	}
 	return pg
 }
