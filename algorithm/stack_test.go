@@ -1,14 +1,14 @@
-package storage_test
+package algorithm_test
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/tychyDB/storage"
+	"github.com/tychyDB/algorithm"
 )
 
 func TestStack(t *testing.T) {
-	s := storage.NewStack(10)
+	s := algorithm.NewStack(10)
 	s.Push(10)
 	s.Push(11)
 	res := s.Pop()
@@ -39,7 +39,7 @@ func TestStack(t *testing.T) {
 }
 
 func TestStackExpand(t *testing.T) {
-	s := storage.NewStack(16)
+	s := algorithm.NewStack(16)
 	for i := 0; i < 1030; i++ {
 		s.Push(i)
 	}

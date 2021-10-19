@@ -6,6 +6,7 @@ import (
 
 	"github.com/goccy/go-graphviz"
 	"github.com/goccy/go-graphviz/cgraph"
+	"github.com/tychyDB/algorithm"
 )
 
 func (t *Table) Viz(fname string) {
@@ -20,7 +21,7 @@ func (t *Table) Viz(fname string) {
 		}
 		g.Close()
 	}()
-	pageQueue := NewQueue(64)
+	pageQueue := algorithm.NewQueue(64)
 	nodeMap := make(map[uint32]*cgraph.Node)
 	parentMap := make(map[uint32]uint32)
 

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math"
 	"strings"
+
+	"github.com/tychyDB/algorithm"
 )
 
 var fm = NewFileMgr("testfile")
@@ -307,7 +309,7 @@ func (tb *Table) selectInt(col Column) (res []interface{}, err error) {
 	if col.ty.id != integerId {
 		return nil, errors.New("you must specify int type column")
 	}
-	pageQueue := NewQueue(64)
+	pageQueue := algorithm.NewQueue(64)
 	pageQueue.Push(int(tb.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
@@ -333,7 +335,7 @@ func (tb *Table) selectChar(col Column) (res []interface{}, err error) {
 	if col.ty.id != charId {
 		return nil, errors.New("you must specify int type column")
 	}
-	pageQueue := NewQueue(64)
+	pageQueue := algorithm.NewQueue(64)
 	pageQueue.Push(int(tb.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
@@ -403,7 +405,7 @@ func (tb *Table) Select(names ...string) (res [][]interface{}, err error) {
 
 func (tb *Table) Print() {
 	fmt.Println("--- start table print ---")
-	pageQueue := NewQueue(64)
+	pageQueue := algorithm.NewQueue(64)
 	pageQueue.Push(int(tb.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())

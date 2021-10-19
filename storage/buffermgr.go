@@ -3,6 +3,8 @@ package storage
 import (
 	"errors"
 	"fmt"
+
+	"github.com/tychyDB/algorithm"
 )
 
 const MaxBufferPoolSize = 10
@@ -13,14 +15,14 @@ const MaxBufferPoolSize = 10
 type PageTable struct {
 	numOfPin int
 	table    map[int]int
-	queue    Queue
+	queue    algorithm.Queue
 }
 
 func newPageTable() *PageTable {
 	ptb := &PageTable{}
 	ptb.numOfPin = 0
 	ptb.table = make(map[int]int)
-	ptb.queue = NewQueue(64)
+	ptb.queue = algorithm.NewQueue(64)
 	return ptb
 }
 
