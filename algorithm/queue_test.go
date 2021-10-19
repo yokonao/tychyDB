@@ -1,14 +1,14 @@
-package storage_test
+package algorithm_test
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/tychyDB/storage"
+	"github.com/tychyDB/algorithm"
 )
 
 func TestQueue(t *testing.T) {
-	q := storage.NewQueue(10)
+	q := algorithm.NewQueue(10)
 	q.Push(10)
 	q.Push(11)
 	res := q.Pop()
@@ -57,7 +57,7 @@ func TestQueue(t *testing.T) {
 }
 
 func TestQueueExpand(t *testing.T) {
-	q := storage.NewQueue(16)
+	q := algorithm.NewQueue(16)
 	for i := 0; i < 1030; i++ {
 		q.Push(i)
 	}
