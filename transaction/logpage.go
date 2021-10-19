@@ -39,15 +39,12 @@ func NewLogPageFromBytes(bytes []byte) *LogPage {
 	pg.numLogs = binary.BigEndian.Uint32(bytes[1+IntSize : 1+2*IntSize])
 	pg.logs = make([]*Log, pg.numLogs)
 	cur := 1 + 2*IntSize
-	fmt.Printf("blk:%d", blockNum)
-	fmt.Printf("numlog:%d", pg.numLogs)
 
 	for i := 0; i < int(pg.numLogs); i++ {
 		lenLog := binary.BigEndian.Uint32(bytes[cur : cur+IntSize])
 		log := &Log{}
 		log.txnId = binary.BigEndian.Uint32(bytes[cur+IntSize : cur+2*IntSize])
 		log.lsn = binary.BigEndian.Uint32(bytes[cur+2*IntSize : cur+3*IntSize])
-		fmt.Printf("lsn%d", log.lsn)
 		log.logType = binary.BigEndian.Uint32(bytes[cur+3*IntSize : cur+4*IntSize])
 		if log.logType == UPDATE {
 			// この部分はUpdateInfoにfromBytesを実装して移譲できる
@@ -77,7 +74,6 @@ func NewLogPageFromBytes(bytes []byte) *LogPage {
 
 func (pg *LogPage) ToBytes() []byte {
 	buf := make([]byte, storage.PageSize)
-	fmt.Printf("to blk:%d", pg.blk.BlockNum)
 	binary.BigEndian.PutUint32(buf[:IntSize], pg.blk.BlockNum)
 	if pg.isFull {
 		buf[IntSize] = 1
@@ -85,7 +81,6 @@ func (pg *LogPage) ToBytes() []byte {
 		buf[IntSize] = 0
 	}
 	binary.BigEndian.PutUint32(buf[1+IntSize:1+2*IntSize], pg.numLogs)
-	fmt.Printf("to numlog:%d", pg.numLogs)
 	cur := 1 + 2*IntSize
 	for i := 0; i < int(pg.numLogs); i++ {
 		logBuf := pg.logs[i].toBytes()
