@@ -18,10 +18,9 @@ type LogPage struct {
 	logs    []*Log
 }
 
-func newLogPage() *LogPage {
+func newLogPage(pageNum uint32) *LogPage {
 	logPage := &LogPage{}
-	logPage.blk = storage.NewBlockId(UniqueLogPageNumber)
-	UniqueLogPageNumber++
+	logPage.blk = storage.NewBlockId(pageNum)
 	logPage.isFull = false
 	logPage.numLogs = 0
 	return logPage

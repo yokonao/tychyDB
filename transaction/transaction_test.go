@@ -11,6 +11,7 @@ import (
 func cleanDisk(t *testing.T) {
 	diskDir := os.Getenv("DISK")
 	os.Remove(diskDir + "/testfile")
+	os.Remove(diskDir + "/logfile")
 }
 
 func createTable(t *testing.T) {

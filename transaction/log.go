@@ -8,11 +8,6 @@ import (
 	"github.com/tychyDB/storage"
 )
 
-var UniqueLsn uint32
-var UniqueLogPageNumber uint32
-
-const MaxLogPoolSize = 100
-
 const (
 	BEGIN  = 0
 	UPDATE = 1
@@ -20,33 +15,38 @@ const (
 	COMMIT = 3
 )
 
-func init() {
-	UniqueLsn = 0
-	UniqueLogPageNumber = 0
-}
-
 type LogMgr struct {
-	fm         storage.FileMgr
-	flashedLSN uint32
-	LogPage    *LogPage // use UpperCase for test
+	UniqueLSN     uint32
+	UniquePageNum uint32
+	LogPage       *LogPage // use UpperCase for test
+	fm            storage.FileMgr
+	flashedLSN    uint32
 }
 
 func NewLogMgr(fm storage.FileMgr) *LogMgr {
 	logMgr := LogMgr{}
+	logMgr.UniqueLSN = 0
+	logMgr.UniquePageNum = 0
 	logMgr.fm = fm
 	logMgr.flashedLSN = 0
-	logMgr.LogPage = newLogPage()
+	logMgr.LogPage = newLogPage(logMgr.getUniquePageNum())
 	return &logMgr
 }
 
-func getUniqueLSN() uint32 {
-	res := UniqueLsn
-	UniqueLsn++
+func (lm *LogMgr) getUniqueLSN() uint32 {
+	res := lm.UniqueLSN
+	lm.UniqueLSN++
+	return res
+}
+
+func (lm *LogMgr) getUniquePageNum() uint32 {
+	res := lm.UniquePageNum
+	lm.UniquePageNum++
 	return res
 }
 
 func (lm *LogMgr) addLog(txnId, logType uint32) {
-	log := newUniqueLog(txnId, logType)
+	log := newUniqueLog(lm.getUniqueLSN(), txnId, logType)
 	lm.LogPage.addLog(log)
 }
 
@@ -54,7 +54,7 @@ func (lm *LogMgr) addLogForUpdate(txnId, logType uint32, updateInfo storage.Upda
 	if logType != UPDATE {
 		panic(errors.New("log type expected to be UPDATE"))
 	}
-	log := newUniqueLog(txnId, UPDATE)
+	log := newUniqueLog(lm.getUniqueLSN(), logType, UPDATE)
 	log.updateInfo = updateInfo
 	lm.LogPage.addLog(log)
 }
@@ -70,10 +70,10 @@ type Log struct {
 	updateInfo storage.UpdateInfo
 }
 
-func newUniqueLog(txnId uint32, logType uint32) *Log {
+func newUniqueLog(lsn uint32, txnId uint32, logType uint32) *Log {
 	log := &Log{}
 	log.txnId = txnId
-	log.lsn = getUniqueLSN()
+	log.lsn = lsn
 	log.logType = logType
 	return log
 }
