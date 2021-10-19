@@ -31,11 +31,6 @@ func createTable(t *testing.T) {
 	tb.Add(0, 0, 0)
 	tb.Add(80000, 10, 0)
 	tb.Flush()
-
-	_, err := tb.Select("hoge", "fuga", "piyo", "fuga")
-	if err != nil {
-		t.Error("failure select")
-	}
 }
 
 func TestTxn(t *testing.T) {
@@ -82,5 +77,18 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 			t.Error("byte mismatch")
 		}
 	}
+}
 
+func TestLogWrite(t *testing.T) {
+	createTable(t)
+	storage.Reset()
+	logfm := storage.NewFileMgr("logfile")
+	tb := storage.NewTableFromFIle()
+	lm := transaction.NewLogMgr(*logfm)
+	txn := transaction.NewTransaction(lm)
+	txn.Begin()
+	updateInfo := tb.Update("hoge", 2, "fuga", 33)
+	txn.Update(updateInfo)
+	txn.Commit()
+	lm.WritePage()
 }

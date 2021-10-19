@@ -50,6 +50,10 @@ func (lm *LogMgr) addLogForUpdate(txnId, logType uint32, updateInfo storage.Upda
 	lm.LogPage.addLog(log)
 }
 
+func (lm *LogMgr) WritePage() {
+	lm.fm.Write(lm.LogPage.blk, lm.LogPage.ToBytes())
+}
+
 func (lm *LogMgr) Print() {
 	lm.LogPage.Print()
 }
