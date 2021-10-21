@@ -18,17 +18,16 @@ func newMetaPage(blk BlockId) *MetaPage {
 
 func newMetaPageFromBytes(bytes []byte) *MetaPage {
 	pg := &MetaPage{}
-	rootBlockId := binary.BigEndian.Uint32(bytes[:IntSize])
-	UniqueBlockId = binary.BigEndian.Uint32(bytes[IntSize : 2*IntSize])
+	iter := util.NewIterStruct(0, bytes)
+	rootBlockId := iter.NextUInt32()
+	UniqueBlockId = iter.NextUInt32()
 	pg.rootBlk = NewBlockId(rootBlockId)
 
-	lencols := binary.BigEndian.Uint32(bytes[2*IntSize : 3*IntSize])
-	cur := 3 * IntSize
-	for i := 0; i < int(lencols); i++ {
-		datalen := binary.BigEndian.Uint32(bytes[cur : cur+IntSize])
-		c := newColumnfromBytes(bytes[cur : cur+int(datalen)])
+	lenCols := iter.NextUInt32()
+	for i := 0; i < int(lenCols); i++ {
+		dataLen := iter.LookUInt32()
+		c := newColumnfromBytes(iter.NextBytes(dataLen))
 		pg.cols = append(pg.cols, c)
-		cur += int(datalen)
 	}
 	return pg
 }
@@ -41,8 +40,8 @@ func (pg *MetaPage) toBytes() []byte {
 
 	for _, col := range pg.cols {
 		b := col.toBytes()
-		datalen := binary.BigEndian.Uint32(b[:IntSize])
-		gen.PutBytes(datalen, b)
+		dataLen := binary.BigEndian.Uint32(b[:IntSize])
+		gen.PutBytes(dataLen, b)
 	}
 	return gen.DumpBytes()
 }
