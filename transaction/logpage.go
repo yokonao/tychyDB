@@ -1,7 +1,6 @@
 package transaction
 
 import (
-	"encoding/binary"
 	"fmt"
 
 	"github.com/tychyDB/storage"
@@ -44,14 +43,13 @@ func NewLogPageFromBytes(bytes []byte) *LogPage {
 		log.logType = iter.NextUInt32()
 		if log.logType == UPDATE {
 			// この部分はUpdateInfoにfromBytesを実装して移譲できる
-			iter.NextUInt32() // skip len(Update Info)
+			iter.NextUInt32() // skip uinfoBufLen
 			pageIdx := iter.NextUInt32()
 			ptrIdx := iter.NextUInt32()
 			colNum := iter.NextUInt32()
 			fromLen := iter.NextUInt32()
-			toLen := iter.NextUInt32()
-			fmt.Println("from ", fromLen, "to ", toLen)
 			from := iter.NextBytes(fromLen)
+			toLen := iter.NextUInt32()
 			to := iter.NextBytes(toLen)
 			uinfo := storage.NewUpdateInfo(pageIdx, ptrIdx, colNum, from, to)
 			log.updateInfo = uinfo
@@ -62,21 +60,18 @@ func NewLogPageFromBytes(bytes []byte) *LogPage {
 }
 
 func (pg *LogPage) ToBytes() []byte {
-	buf := make([]byte, storage.PageSize)
-	binary.BigEndian.PutUint32(buf[:IntSize], pg.blk.BlockNum)
-	if pg.isFull {
-		buf[IntSize] = 1
-	} else {
-		buf[IntSize] = 0
-	}
-	binary.BigEndian.PutUint32(buf[1+IntSize:1+2*IntSize], pg.numLogs)
-	cur := 1 + 2*IntSize
+	gen := util.NewGenStruct(0, storage.PageSize)
+	gen.PutUInt32(pg.blk.BlockNum)
+	gen.PutBool(pg.isFull)
+	gen.PutUInt32(pg.numLogs)
+
 	for i := 0; i < int(pg.numLogs); i++ {
 		logBuf := pg.logs[i].toBytes()
-		copy(buf[cur:cur+len(logBuf)], logBuf)
-		cur += len(logBuf)
+		logBufLen := uint32(len(logBuf))
+		gen.PutUInt32(logBufLen)
+		gen.PutBytes(logBufLen, logBuf)
 	}
-	return buf
+	return gen.DumpBytes()
 }
 
 func (pg *LogPage) addLog(log *Log) {

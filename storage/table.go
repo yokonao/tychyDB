@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/tychyDB/algorithm"
+	"github.com/tychyDB/util"
 )
 
 var fm = NewFileMgr("testfile")
@@ -201,18 +202,18 @@ func NewUpdateInfo(pageIdx uint32, ptrIdx uint32, colNum uint32, from []byte, to
 }
 
 func (uinfo *UpdateInfo) ToBytes() []byte {
-	// 先頭にデータの長さを格納する
-	buf := make([]byte, 6*IntSize)
-	binary.BigEndian.PutUint32(buf[IntSize:2*IntSize], uinfo.PageIdx)
-	binary.BigEndian.PutUint32(buf[2*IntSize:3*IntSize], uinfo.PtrIdx)
-	binary.BigEndian.PutUint32(buf[3*IntSize:4*IntSize], uinfo.ColNum)
-
-	binary.BigEndian.PutUint32(buf[4*IntSize:5*IntSize], uint32(len(uinfo.From)))
-	binary.BigEndian.PutUint32(buf[5*IntSize:6*IntSize], uint32(len(uinfo.To)))
-	buf = append(buf, uinfo.From...)
-	buf = append(buf, uinfo.To...)
-	binary.BigEndian.PutUint32(buf[:IntSize], uint32(len(buf)))
-	return buf
+	fromLen := uint32(len(uinfo.From))
+	toLen := uint32(len(uinfo.To))
+	bufLen := 5*IntSize + fromLen + toLen
+	gen := util.NewGenStruct(0, uint32(bufLen))
+	gen.PutUInt32(uinfo.PageIdx)
+	gen.PutUInt32(uinfo.PtrIdx)
+	gen.PutUInt32(uinfo.ColNum)
+	gen.PutUInt32(fromLen)
+	gen.PutBytes(fromLen, uinfo.From)
+	gen.PutUInt32(toLen)
+	gen.PutBytes(toLen, uinfo.To)
+	return gen.DumpBytes()
 }
 
 func (tb *Table) Update(prColName string, prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {
