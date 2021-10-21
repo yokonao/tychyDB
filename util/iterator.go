@@ -20,15 +20,6 @@ func NewIterStruct(top uint32, bytes []byte) *IterStruct {
 	return is
 }
 
-// cur do not proceed in Look
-func (is *IterStruct) LookUInt32() uint32 {
-	if is.cur+IntSize > is.byteLen {
-		panic(errors.New("bytes end"))
-	}
-	res := binary.BigEndian.Uint32(is.bytes[is.cur : is.cur+IntSize])
-	return res
-}
-
 func (is *IterStruct) NextUInt32() uint32 {
 	if is.cur+IntSize > is.byteLen {
 		panic(errors.New("bytes end"))
