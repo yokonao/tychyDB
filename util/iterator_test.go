@@ -15,17 +15,31 @@ func TestIterUInt32(t *testing.T) {
 
 	iter := util.NewIterStruct(0, bytes)
 
+	if i := iter.LookUInt32(); i != 10 {
+		t.Errorf("expected %d, but got %d", 10, i)
+	}
+
 	if i := iter.NextUInt32(); i != 10 {
 		t.Errorf("expected %d, but got %d", 10, i)
 	}
+
+	if i := iter.LookUInt32(); i != 16 {
+		t.Errorf("expected %d, but got %d", 16, i)
+	}
+
 	if i := iter.NextUInt32(); i != 16 {
 		t.Errorf("expected %d, but got %d", 16, i)
+	}
+
+	if i := iter.LookUInt32(); i != 30 {
+		t.Errorf("expected %d, but got %d", 30, i)
 	}
 
 	if i := iter.NextUInt32(); i != 30 {
 		t.Errorf("expected %d, but got %d", 30, i)
 	}
 }
+
 func TestIterBool(t *testing.T) {
 	bytes := make([]byte, 12)
 	bytes[0] = 1
