@@ -14,6 +14,7 @@ func TestIterUInt32(t *testing.T) {
 	binary.BigEndian.PutUint32(bytes[2*util.IntSize:3*util.IntSize], 30)
 
 	iter := util.NewIterStruct(0, bytes)
+
 	if i := iter.NextUInt32(); i != 10 {
 		t.Errorf("expected %d, but got %d", 10, i)
 	}
@@ -32,9 +33,11 @@ func TestIterBool(t *testing.T) {
 	bytes[5] = 0
 
 	iter := util.NewIterStruct(0, bytes)
+
 	if i := iter.NextBool(); !i {
 		t.Errorf("expected %v, but got %v", true, i)
 	}
+
 	if i := iter.NextUInt32(); i != 16 {
 		t.Errorf("expected %d, but got %d", 16, i)
 	}
