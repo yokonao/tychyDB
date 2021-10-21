@@ -1,8 +1,6 @@
 package storage
 
 import (
-	"encoding/binary"
-
 	"github.com/tychyDB/util"
 )
 
@@ -25,7 +23,7 @@ func newMetaPageFromBytes(bytes []byte) *MetaPage {
 
 	lenCols := iter.NextUInt32()
 	for i := 0; i < int(lenCols); i++ {
-		dataLen := iter.LookUInt32()
+		dataLen := iter.NextUInt32()
 		c := newColumnfromBytes(iter.NextBytes(dataLen))
 		pg.cols = append(pg.cols, c)
 	}
@@ -39,9 +37,10 @@ func (pg *MetaPage) toBytes() []byte {
 	gen.PutUInt32(uint32(len(pg.cols)))
 
 	for _, col := range pg.cols {
-		b := col.toBytes()
-		dataLen := binary.BigEndian.Uint32(b[:IntSize])
-		gen.PutBytes(dataLen, b)
+		buf := col.toBytes()
+		bufLen := uint32(len(buf))
+		gen.PutUInt32(bufLen)
+		gen.PutBytes(bufLen, buf)
 	}
 	return gen.DumpBytes()
 }

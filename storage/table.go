@@ -36,28 +36,24 @@ func (c Column) String() string {
 }
 
 func (c Column) toBytes() []byte {
-	bytes := []byte{}
-	buf := make([]byte, 4*IntSize)
-	binary.BigEndian.PutUint32(buf[:IntSize], uint32(4*IntSize+c.ty.size))
-	binary.BigEndian.PutUint32(buf[IntSize:2*IntSize], uint32(c.ty.id))
-	binary.BigEndian.PutUint32(buf[2*IntSize:3*IntSize], c.ty.size)
-	binary.BigEndian.PutUint32(buf[3*IntSize:4*IntSize], c.pos)
-
-	bytes = append(bytes, buf...)
-
-	buf = make([]byte, c.ty.size)
+	gen := util.NewGenStruct(0, 3*IntSize+c.ty.size)
+	gen.PutUInt32(uint32(c.ty.id))
+	gen.PutUInt32(c.ty.size)
+	gen.PutUInt32(c.pos)
+	buf := make([]byte, c.ty.size)
 	rd := strings.NewReader(c.name)
 	rd.Read(buf)
-	bytes = append(bytes, buf...)
-	return bytes
+	gen.PutBytes(c.ty.size, buf)
+	return gen.DumpBytes()
 }
 
 func newColumnfromBytes(bytes []byte) Column {
 	c := Column{}
-	c.ty.id = TypeId(binary.BigEndian.Uint32(bytes[IntSize : 2*IntSize]))
-	c.ty.size = binary.BigEndian.Uint32(bytes[2*IntSize : 3*IntSize])
-	c.pos = binary.BigEndian.Uint32(bytes[3*IntSize : 4*IntSize])
-	c.name = string(bytes[4*IntSize:])
+	iter := util.NewIterStruct(0, bytes)
+	c.ty.id = TypeId(iter.NextUInt32())
+	c.ty.size = iter.NextUInt32()
+	c.pos = iter.NextUInt32()
+	c.name = string(iter.NextBytes(c.ty.size))
 	return c
 }
 
