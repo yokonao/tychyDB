@@ -22,6 +22,7 @@ func NewGenStruct(top uint32, byteLen uint32) *GenStruct {
 func (gs *GenStruct) DumpBytes() []byte {
 	return gs.bytes
 }
+
 func (gs *GenStruct) PutUInt32(val uint32) {
 	if gs.cur+IntSize > gs.byteLen {
 		panic(errors.New("buffer is full"))
@@ -48,4 +49,5 @@ func (gs *GenStruct) PutBytes(n uint32, bytes []byte) {
 		panic(errors.New("buffer is full"))
 	}
 	copy(gs.bytes[gs.cur:gs.cur+n], bytes)
+	gs.cur += n
 }

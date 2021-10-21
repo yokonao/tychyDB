@@ -72,10 +72,12 @@ func TestGenBytes(t *testing.T) {
 	t_gs.PutUInt32(11)
 	t_gs.PutUInt32(111)
 
-	gs := util.NewGenStruct(0, 20)
+	gs := util.NewGenStruct(0, 3232)
 	gs.PutUInt32(11)
 	gs.PutBytes(12, t_gs.DumpBytes())
 	gs.PutUInt32(22)
+	gs.PutBytes(12, t_gs.DumpBytes())
+
 	// should avoid IterStrcut?
 	iter := util.NewIterStruct(0, gs.DumpBytes())
 
@@ -99,4 +101,15 @@ func TestGenBytes(t *testing.T) {
 		t.Errorf("expected %d, but got %d", 22, i)
 	}
 
+	if i := iter.NextUInt32(); i != 10 {
+		t.Errorf("expected %d, but got %d", 10, i)
+	}
+
+	if i := iter.NextUInt32(); i != 11 {
+		t.Errorf("expected %d, but got %d", 11, i)
+	}
+
+	if i := iter.NextUInt32(); i != 111 {
+		t.Errorf("expected %d, but got %d", 111, i)
+	}
 }
