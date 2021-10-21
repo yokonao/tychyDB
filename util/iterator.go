@@ -5,9 +5,6 @@ import (
 	"errors"
 )
 
-const BoolSize = 1
-const IntSize = 4
-
 type IterStruct struct {
 	cur     uint32
 	bytes   []byte

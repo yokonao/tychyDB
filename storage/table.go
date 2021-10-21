@@ -24,42 +24,6 @@ func Reset() {
 	ptb = newPageTable()
 }
 
-type Column struct {
-	ty   Type
-	pos  uint32
-	name string
-}
-
-func (c Column) String() string {
-	return fmt.Sprintf("{ type: %s, name: %s }", c.ty, c.name)
-}
-
-func (c Column) toBytes() []byte {
-	bytes := []byte{}
-	buf := make([]byte, 4*IntSize)
-	binary.BigEndian.PutUint32(buf[:IntSize], uint32(4*IntSize+c.ty.size))
-	binary.BigEndian.PutUint32(buf[IntSize:2*IntSize], uint32(c.ty.id))
-	binary.BigEndian.PutUint32(buf[2*IntSize:3*IntSize], c.ty.size)
-	binary.BigEndian.PutUint32(buf[3*IntSize:4*IntSize], c.pos)
-
-	bytes = append(bytes, buf...)
-
-	buf = make([]byte, c.ty.size)
-	rd := strings.NewReader(c.name)
-	rd.Read(buf)
-	bytes = append(bytes, buf...)
-	return bytes
-}
-
-func newColumnfromBytes(bytes []byte) Column {
-	c := Column{}
-	c.ty.id = TypeId(binary.BigEndian.Uint32(bytes[IntSize : 2*IntSize]))
-	c.ty.size = binary.BigEndian.Uint32(bytes[2*IntSize : 3*IntSize])
-	c.pos = binary.BigEndian.Uint32(bytes[3*IntSize : 4*IntSize])
-	c.name = string(bytes[4*IntSize:])
-	return c
-}
-
 type Table struct {
 	cols     []Column
 	rootBlk  BlockId
@@ -180,39 +144,6 @@ func (tb *Table) Add(args ...interface{}) error {
 	}
 	tb.addRecord(Record{size: uint32(len(bytes)), data: bytes})
 	return nil
-}
-
-type UpdateInfo struct {
-	PageIdx uint32
-	PtrIdx  uint32
-	ColNum  uint32
-	From    []byte
-	To      []byte
-}
-
-func NewUpdateInfo(pageIdx uint32, ptrIdx uint32, colNum uint32, from []byte, to []byte) UpdateInfo {
-	info := UpdateInfo{}
-	info.PageIdx = pageIdx
-	info.PtrIdx = ptrIdx
-	info.ColNum = colNum
-	info.From = from
-	info.To = to
-	return info
-}
-
-func (uinfo *UpdateInfo) ToBytes() []byte {
-	// 先頭にデータの長さを格納する
-	buf := make([]byte, 6*IntSize)
-	binary.BigEndian.PutUint32(buf[IntSize:2*IntSize], uinfo.PageIdx)
-	binary.BigEndian.PutUint32(buf[2*IntSize:3*IntSize], uinfo.PtrIdx)
-	binary.BigEndian.PutUint32(buf[3*IntSize:4*IntSize], uinfo.ColNum)
-
-	binary.BigEndian.PutUint32(buf[4*IntSize:5*IntSize], uint32(len(uinfo.From)))
-	binary.BigEndian.PutUint32(buf[5*IntSize:6*IntSize], uint32(len(uinfo.To)))
-	buf = append(buf, uinfo.From...)
-	buf = append(buf, uinfo.To...)
-	binary.BigEndian.PutUint32(buf[:IntSize], uint32(len(buf)))
-	return buf
 }
 
 func (tb *Table) Update(prColName string, prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {

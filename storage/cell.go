@@ -1,6 +1,10 @@
 package storage
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+
+	"github.com/tychyDB/util"
+)
 
 type Cell interface {
 	getSize() uint32
@@ -15,19 +19,20 @@ type Record struct {
 }
 
 func (rec Record) getSize() uint32 {
-	return 4 + uint32(len(rec.data))
+	return IntSize + uint32(len(rec.data))
 }
 
 func (rec Record) toBytes() []byte {
-	buf := make([]byte, rec.getSize())
-	binary.BigEndian.PutUint32(buf[:IntSize], rec.size)
-	copy(buf[4:], rec.data)
-	return buf
+	gen := util.NewGenStruct(0, rec.getSize())
+	gen.PutUInt32(rec.size)
+	gen.PutBytes(rec.size, rec.data)
+	return gen.DumpBytes()
 }
 
 func (rec Record) fromBytes(bytes []byte) Cell {
-	rec.size = binary.BigEndian.Uint32(bytes[:IntSize])
-	rec.data = bytes[IntSize : IntSize+rec.size]
+	iter := util.NewIterStruct(0, bytes)
+	rec.size = iter.NextUInt32()
+	rec.data = iter.NextBytes(rec.size)
 	return rec
 }
 
@@ -52,15 +57,16 @@ func (cell KeyCell) getKey() int32 {
 }
 
 func (cell KeyCell) toBytes() []byte {
-	buf := make([]byte, cell.getSize())
-	binary.BigEndian.PutUint32(buf[:IntSize], uint32(cell.key))
-	binary.BigEndian.PutUint32(buf[IntSize:2*IntSize], cell.pageIndex)
-	return buf
+	gen := util.NewGenStruct(0, cell.getSize())
+	gen.PutUInt32(uint32(cell.key))
+	gen.PutUInt32(cell.pageIndex)
+	return gen.DumpBytes()
 }
 
 func (cell KeyCell) fromBytes(bytes []byte) Cell {
-	cell.key = int32(binary.BigEndian.Uint32(bytes[:IntSize]))
-	cell.pageIndex = binary.BigEndian.Uint32(bytes[IntSize : 2*IntSize])
+	iter := util.NewIterStruct(0, bytes)
+	cell.key = int32(iter.NextUInt32())
+	cell.pageIndex = iter.NextUInt32()
 	return cell
 }
 
@@ -78,10 +84,11 @@ func (cell KeyValueCell) getKey() int32 {
 }
 
 func (cell KeyValueCell) toBytes() []byte {
-	buf := make([]byte, cell.getSize())
-	binary.BigEndian.PutUint32(buf[:IntSize], uint32(cell.key))
-	copy(buf[IntSize:], cell.rec.toBytes())
-	return buf
+	gen := util.NewGenStruct(0, cell.getSize())
+	gen.PutUInt32(uint32(cell.key))
+	bytes := cell.rec.toBytes()
+	gen.PutBytes(uint32(len(bytes)), bytes)
+	return gen.DumpBytes()
 }
 
 func (cell KeyValueCell) fromBytes(bytes []byte) Cell {

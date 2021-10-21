@@ -1,10 +1,10 @@
 package transaction
 
 import (
-	"encoding/binary"
 	"fmt"
 
 	"github.com/tychyDB/storage"
+	"github.com/tychyDB/util"
 )
 
 const (
@@ -30,16 +30,20 @@ func newUniqueLog(lsn uint32, txnId uint32, logType uint32) *Log {
 }
 
 func (log *Log) toBytes() []byte {
-	buf := make([]byte, 4*IntSize)
-	binary.BigEndian.PutUint32(buf[IntSize:2*IntSize], log.txnId)
-	binary.BigEndian.PutUint32(buf[2*IntSize:3*IntSize], log.lsn)
-	binary.BigEndian.PutUint32(buf[3*IntSize:4*IntSize], log.logType)
+	gen := util.NewGenStruct(0, storage.PageSize)
+	actualLen := 3 * IntSize // len(log) is not constant
+	gen.PutUInt32(log.txnId)
+	gen.PutUInt32(log.lsn)
+	gen.PutUInt32(log.logType)
+
 	if log.logType == UPDATE {
 		uinfoBuf := log.updateInfo.ToBytes()
-		buf = append(buf, uinfoBuf...)
+		uinfoBufLen := uint32(len(uinfoBuf))
+		actualLen += int(uinfoBufLen) + IntSize
+		gen.PutUInt32(uinfoBufLen)
+		gen.PutBytes(uinfoBufLen, uinfoBuf)
 	}
-	binary.BigEndian.PutUint32(buf[:IntSize], uint32(len(buf)))
-	return buf
+	return gen.DumpBytes()[:actualLen]
 }
 
 func (log *Log) info() {

@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"encoding/binary"
+	"github.com/tychyDB/util"
 )
 
 type MetaPage struct {
@@ -16,33 +16,31 @@ func newMetaPage(blk BlockId) *MetaPage {
 
 func newMetaPageFromBytes(bytes []byte) *MetaPage {
 	pg := &MetaPage{}
-	rootBlockId := binary.BigEndian.Uint32(bytes[:IntSize])
-	UniqueBlockId = binary.BigEndian.Uint32(bytes[IntSize : 2*IntSize])
+	iter := util.NewIterStruct(0, bytes)
+	rootBlockId := iter.NextUInt32()
+	UniqueBlockId = iter.NextUInt32()
 	pg.rootBlk = NewBlockId(rootBlockId)
 
-	lencols := binary.BigEndian.Uint32(bytes[2*IntSize : 3*IntSize])
-	cur := 3 * IntSize
-	for i := 0; i < int(lencols); i++ {
-		datalen := binary.BigEndian.Uint32(bytes[cur : cur+IntSize])
-		c := newColumnfromBytes(bytes[cur : cur+int(datalen)])
+	lenCols := iter.NextUInt32()
+	for i := 0; i < int(lenCols); i++ {
+		dataLen := iter.NextUInt32()
+		c := newColumnfromBytes(iter.NextBytes(dataLen))
 		pg.cols = append(pg.cols, c)
-		cur += int(datalen)
 	}
 	return pg
 }
 
 func (pg *MetaPage) toBytes() []byte {
-	buf := make([]byte, PageSize)
-	binary.BigEndian.PutUint32(buf[:IntSize], pg.rootBlk.BlockNum)
-	binary.BigEndian.PutUint32(buf[IntSize:2*IntSize], UniqueBlockId)
+	gen := util.NewGenStruct(0, PageSize)
+	gen.PutUInt32(pg.rootBlk.BlockNum)
+	gen.PutUInt32(UniqueBlockId)
+	gen.PutUInt32(uint32(len(pg.cols)))
 
-	binary.BigEndian.PutUint32(buf[2*IntSize:3*IntSize], uint32(len(pg.cols)))
-	cur := 3 * IntSize
 	for _, col := range pg.cols {
-		b := col.toBytes()
-		datalen := binary.BigEndian.Uint32(b[:IntSize])
-		copy(buf[cur:cur+int(datalen)], b)
-		cur += int(datalen)
+		buf := col.toBytes()
+		bufLen := uint32(len(buf))
+		gen.PutUInt32(bufLen)
+		gen.PutBytes(bufLen, buf)
 	}
-	return buf
+	return gen.DumpBytes()
 }
