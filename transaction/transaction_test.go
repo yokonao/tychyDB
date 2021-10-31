@@ -139,4 +139,20 @@ func TestLogLSN(t *testing.T) {
 		t.Error("invalid pageLSN")
 	}
 	txn.Commit()
+	lm.WritePage()
+
+	newlm := transaction.NewLogMgrFromFile(*logfm)
+	if lm.FlashedLSN != newlm.FlashedLSN {
+		t.Error("flashedLSN mismatch")
+	}
+
+	if lm.UniqueLSN != newlm.UniqueLSN {
+		t.Error("UniqueLSN mismatch")
+	}
+
+	if lm.UniquePageNum != newlm.UniquePageNum {
+		t.Error("UniquePageNum mismatch")
+	}
+	lm.LogPage.Print()
+	newlm.LogPage.Print()
 }
