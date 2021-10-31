@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"os"
 )
 
@@ -63,4 +64,25 @@ func (fm *FileMgr) Read(blk BlockId) (int, []byte) {
 		panic(err)
 	}
 	return n, buf
+}
+
+func (fm *FileMgr) ReadLastBlock() (int, int, []byte) {
+	curBlkId := 0
+	lastBuf := make([]byte, PageSize)
+	lastN := 0
+	for {
+		n, buf := fm.Read(NewBlockId(uint32(curBlkId)))
+		if n == 0 {
+			if curBlkId == 0 {
+				panic(errors.New("cannot get last block"))
+			}
+			return curBlkId - 1, lastN, lastBuf
+		} else if n != PageSize {
+			return curBlkId, n, buf
+		}
+
+		copy(lastBuf, buf)
+		lastN = n
+		curBlkId++
+	}
 }

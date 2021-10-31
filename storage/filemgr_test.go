@@ -46,3 +46,36 @@ func TestFileMgr(t *testing.T) {
 		}
 	}
 }
+
+func TestFileMgrGetLastBlock(t *testing.T) {
+	byteLen := 42000
+	token := make([]byte, byteLen)
+	rand.Read(token)
+	fm := storage.NewFileMgr("testFileMgr")
+	defer fm.Clean()
+	numBlocks := (byteLen + storage.PageSize) / storage.PageSize
+	for curBlkId := 0; curBlkId < numBlocks; curBlkId++ {
+		curBlk := storage.NewBlockId(uint32(curBlkId))
+		lower := curBlkId * storage.PageSize
+		upper := min(byteLen, (curBlkId+1)*storage.PageSize)
+		fm.Write(curBlk, token[lower:upper])
+	}
+
+	curBlkId := numBlocks - 1
+	lower := curBlkId * storage.PageSize
+	upper := min(byteLen, (curBlkId+1)*storage.PageSize)
+	buf := token[lower:upper]
+
+	blkId, n, lastBytes := fm.ReadLastBlock()
+	if blkId != numBlocks-1 {
+		t.Error("block id mismatch")
+	}
+	if n != len(buf) {
+		t.Error("byte length mismatch")
+	}
+	for i := 0; i < n; i++ {
+		if lastBytes[i] != buf[i] {
+			t.Error("byte mismatch")
+		}
+	}
+}
