@@ -16,7 +16,7 @@ type LogMgr struct {
 
 func NewLogMgr(fm storage.FileMgr) *LogMgr {
 	logMgr := LogMgr{}
-	logMgr.UniqueLSN = 0
+	logMgr.UniqueLSN = 1
 	logMgr.UniquePageNum = 0
 	logMgr.fm = fm
 	logMgr.flashedLSN = 0
