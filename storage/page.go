@@ -4,10 +4,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+
+	"github.com/tychyDB/util"
 )
 
 const PageSize = 4096
-const PageHeaderSize = 9
+const PageHeaderSize = 17
 const MaxDegree = 3
 const IntSize = 4
 
@@ -15,40 +17,41 @@ type PageHeader struct {
 	isLeaf       bool
 	numOfPtr     uint32
 	rightmostPtr uint32
+	pageLSN      uint32
+	recLSN       uint32
 }
 
 func (header PageHeader) toBytes() []byte {
-	buf := make([]byte, PageHeaderSize)
-	if header.isLeaf {
-		buf[0] = 1
-	} else {
-		buf[0] = 0
-	}
-	binary.BigEndian.PutUint32(buf[1:1+IntSize], header.numOfPtr)
-	return buf
+	gen := util.NewGenStruct(0, PageHeaderSize)
+	gen.PutBool(header.isLeaf)
+	gen.PutUInt32(header.numOfPtr)
+	gen.PutUInt32(header.rightmostPtr) // dummy value is okay
+	gen.PutUInt32(header.pageLSN)
+	gen.PutUInt32(header.recLSN)
+	return gen.DumpBytes()
 }
 
 func (header PageHeader) toBytesNonLeaf(rightmostPtrValue uint32) []byte {
-	buf := make([]byte, PageHeaderSize)
-	if header.isLeaf {
-		buf[0] = 1
-	} else {
-		buf[0] = 0
-	}
-	binary.BigEndian.PutUint32(buf[1:1+IntSize], header.numOfPtr)
-	binary.BigEndian.PutUint32(buf[1+IntSize:1+2*IntSize], rightmostPtrValue)
-	return buf
+	gen := util.NewGenStruct(0, PageHeaderSize)
+	gen.PutBool(header.isLeaf)
+	gen.PutUInt32(header.numOfPtr)
+	gen.PutUInt32(rightmostPtrValue)
+	gen.PutUInt32(header.pageLSN)
+	gen.PutUInt32(header.recLSN)
+	return gen.DumpBytes()
 }
 
 func newPageHeaderFromBytes(bytes []byte) PageHeader {
 	if len(bytes) != PageHeaderSize {
 		panic(errors.New("bytes length must be PageHeaderSize"))
 	}
-	isLeaf := bytes[0] == 1
-	numOfPtr := binary.BigEndian.Uint32(bytes[1:5])
-	rightmostPtr := binary.BigEndian.Uint32(bytes[5:9]) // ここで読んだときにはまだディスク上の4096byteのどこからcellが始まるかを示している
-
-	return PageHeader{isLeaf: isLeaf, numOfPtr: numOfPtr, rightmostPtr: rightmostPtr}
+	iter := util.NewIterStruct(0, bytes)
+	isLeaf := iter.NextBool()
+	numOfPtr := iter.NextUInt32()
+	rightmostPtr := iter.NextUInt32() // ここで読んだときにはまだディスク上の4096byteのどこからcellが始まるかを示している
+	pageLSN := iter.NextUInt32()
+	recLSN := iter.NextUInt32()
+	return PageHeader{isLeaf: isLeaf, numOfPtr: numOfPtr, rightmostPtr: rightmostPtr, pageLSN: pageLSN, recLSN: recLSN}
 }
 
 type Page struct {
