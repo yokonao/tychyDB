@@ -49,6 +49,10 @@ func newBufferMgr() *BufferMgr {
 	return bm
 }
 
+func (bm *BufferMgr) pageAt(buffId int) *Page {
+	return bm.pool[buffId].page()
+}
+
 func (bm *BufferMgr) allocate(buff *Buffer) int {
 	for i := 0; i < MaxBufferPoolSize; i++ {
 		if bm.pool[i] == nil {
@@ -74,6 +78,26 @@ func (bm *BufferMgr) load(blk BlockId) int {
 		}
 	}
 	panic(errors.New("no space for page"))
+}
+
+func (bm *BufferMgr) flush(buffId int) {
+	buff := bm.pool[buffId]
+	fm.Write(buff.blk, buff.page().toBytes())
+	bm.pool[buffId] = nil
+}
+
+func (bm *BufferMgr) pin(buffId int) {
+	buff := bm.pool[buffId]
+	buff.pin = true
+	buff.ref = true
+}
+
+func (bm *BufferMgr) unpin(buffId int) {
+	buff := bm.pool[buffId]
+	if !buff.pin {
+		panic(errors.New("pin is already unpinned"))
+	}
+	buff.pin = false
 }
 
 func (bm *BufferMgr) Print() {

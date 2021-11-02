@@ -30,12 +30,9 @@ func (ptb *PageTable) flush() {
 			break
 		}
 		curBlkNum := ptb.queue.Pop()
-		curBlk := NewBlockId(uint32(curBlkNum))
 		curBuffId := ptb.table[int(curBlkNum)]
 		delete(ptb.table, int(curBlkNum))
-		fm.Write(curBlk, bm.pool[curBuffId].page().toBytes())
-		bm.pool[curBuffId] = nil
-
+		bm.flush(curBuffId)
 	}
 	ptb.numOfPin = 0
 }
@@ -47,14 +44,11 @@ func (ptb *PageTable) makeSpace() {
 		return
 	}
 	if !ptb.available() {
-		// unpinされるまで待つ実装でいつか置き換える
+		// TODO unpinされるまで待つ実装でいつか置き換える
 		panic(errors.New("no space in buffer pool"))
 	}
-	//fmt.Println("MakeSpace")
 	for {
-		//ptb.Print()
 		dropBlkNum := ptb.queue.Pop()
-		dropBlk := NewBlockId(uint32(dropBlkNum))
 		dropBuffId := ptb.table[int(dropBlkNum)]
 		dropBuff := bm.pool[dropBuffId]
 		if dropBuff.pin {
@@ -65,14 +59,11 @@ func (ptb *PageTable) makeSpace() {
 				ptb.queue.Push(dropBlkNum)
 			} else {
 				delete(ptb.table, int(dropBlkNum))
-				fm.Write(dropBlk, bm.pool[dropBuffId].page().toBytes())
-				bm.pool[dropBuffId] = nil
+				bm.flush(dropBuffId)
 				break
 			}
 		}
 	}
-	//ptb.Print()
-
 }
 
 func (ptb *PageTable) getBuffId(blk BlockId) int {
@@ -89,11 +80,7 @@ func (ptb *PageTable) getBuffId(blk BlockId) int {
 }
 
 func (ptb *PageTable) available() bool {
-	if ptb.numOfPin == MaxBufferPoolSize {
-		return false
-	} else {
-		return true
-	}
+	return ptb.numOfPin != MaxBufferPoolSize
 }
 
 func (ptb *PageTable) set(blk BlockId, pg *Page) {
@@ -109,11 +96,10 @@ func (ptb *PageTable) read(blk BlockId) *Page {
 }
 
 func (ptb *PageTable) pin(blk BlockId) *Page {
-	buff := bm.pool[ptb.getBuffId(blk)]
-	buff.pin = true
-	buff.ref = true
+	buffId := ptb.getBuffId(blk)
+	bm.pin(buffId)
 	ptb.numOfPin++
-	return buff.page()
+	return bm.pageAt(buffId)
 }
 
 func (ptb *PageTable) unpin(blk BlockId) {
@@ -121,11 +107,7 @@ func (ptb *PageTable) unpin(blk BlockId) {
 	if !exists {
 		panic(errors.New("trying to unpin page not on disk"))
 	}
-	buff := bm.pool[buffId]
-	if !buff.pin {
-		panic(errors.New("pin is already unpinned"))
-	}
-	buff.pin = false
+	bm.unpin(buffId)
 	ptb.numOfPin--
 }
 
