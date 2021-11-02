@@ -50,12 +50,11 @@ func (ptb *PageTable) makeSpace() {
 	for {
 		dropBlkNum := ptb.queue.Pop()
 		dropBuffId := ptb.table[int(dropBlkNum)]
-		dropBuff := bm.pool[dropBuffId]
-		if dropBuff.pin {
+		if bm.isPinned(dropBuffId) {
 			ptb.queue.Push(dropBlkNum)
 		} else {
-			if dropBuff.ref {
-				dropBuff.ref = false
+			if bm.isRefed(dropBuffId) {
+				bm.unRef(dropBuffId)
 				ptb.queue.Push(dropBlkNum)
 			} else {
 				delete(ptb.table, int(dropBlkNum))
@@ -92,7 +91,7 @@ func (ptb *PageTable) set(blk BlockId, pg *Page) {
 }
 
 func (ptb *PageTable) read(blk BlockId) *Page {
-	return bm.pool[ptb.getBuffId(blk)].page()
+	return bm.pageAt(ptb.getBuffId(blk))
 }
 
 func (ptb *PageTable) pin(blk BlockId) *Page {

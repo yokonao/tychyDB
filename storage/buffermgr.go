@@ -86,6 +86,11 @@ func (bm *BufferMgr) flush(buffId int) {
 	bm.pool[buffId] = nil
 }
 
+func (bm *BufferMgr) isPinned(buffId int) bool {
+	buff := bm.pool[buffId]
+	return buff.pin
+}
+
 func (bm *BufferMgr) pin(buffId int) {
 	buff := bm.pool[buffId]
 	buff.pin = true
@@ -98,6 +103,16 @@ func (bm *BufferMgr) unpin(buffId int) {
 		panic(errors.New("pin is already unpinned"))
 	}
 	buff.pin = false
+}
+
+func (bm *BufferMgr) isRefed(buffId int) bool {
+	buff := bm.pool[buffId]
+	return buff.ref
+}
+
+func (bm *BufferMgr) unRef(buffId int) {
+	buff := bm.pool[buffId]
+	buff.ref = false
 }
 
 func (bm *BufferMgr) Print() {
