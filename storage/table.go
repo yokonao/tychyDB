@@ -27,37 +27,37 @@ type Table struct {
 }
 
 func NewTable(fm *FileMgr) Table {
-	t := Table{}
+	tb := Table{}
 	// テーブルのメタ情報を置くためのページ
 
 	metaBlk := newUniqueBlockId()
-	t.metaPage = newMetaPage(metaBlk)
+	tb.metaPage = newMetaPage(metaBlk)
 	if metaBlk.BlockNum != 0 {
 		panic(errors.New("place a meta page at the top of the file"))
 	}
-	t.fm = fm
-	t.fm.Write(metaBlk, t.metaPage.toBytes())
+	tb.fm = fm
+	tb.fm.Write(metaBlk, tb.metaPage.toBytes())
 
 	// rootノード
 	root := newPage(false)
-	t.rootBlk = newUniqueBlockId()
-	ptb.set(t.rootBlk, root)
-	t.metaPage.rootBlk = t.rootBlk
-	return t
+	tb.rootBlk = newUniqueBlockId()
+	ptb.set(tb.rootBlk, root)
+	tb.metaPage.rootBlk = tb.rootBlk
+	return tb
 }
 
 func NewTableFromFIle(fm *FileMgr) Table {
-	t := Table{}
+	tb := Table{}
 	blk := newUniqueBlockId()
 	if blk.BlockNum != 0 {
 		panic(errors.New("expect 0"))
 	}
-	t.fm = fm
+	tb.fm = fm
 	_, bytes := fm.Read(blk)
-	t.metaPage = newMetaPageFromBytes(bytes)
-	t.rootBlk = t.metaPage.rootBlk
-	t.cols = t.metaPage.cols
-	return t
+	tb.metaPage = newMetaPageFromBytes(bytes)
+	tb.rootBlk = tb.metaPage.rootBlk
+	tb.cols = tb.metaPage.cols
+	return tb
 }
 
 func (tb *Table) Flush() {
