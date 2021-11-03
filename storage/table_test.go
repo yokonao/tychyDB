@@ -9,8 +9,11 @@ import (
 
 func createTable(t *testing.T) {
 	storage.Reset()
+	fm := storage.NewFileMgr("testfile")
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
 
-	tb := storage.NewTable()
+	tb := storage.NewTable(fm, ptb)
 	tb.AddColumn("hoge", storage.IntergerType)
 	tb.AddColumn("fuga", storage.IntergerType)
 	tb.AddColumn("piyo", storage.IntergerType)
@@ -36,8 +39,10 @@ func TestDebug(t *testing.T) {
 
 func TestStorageEasy(t *testing.T) {
 	storage.Reset()
-
-	tb := storage.NewTable()
+	fm := storage.NewFileMgr("testfile")
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	tb := storage.NewTable(fm, ptb)
 	tb.AddColumn("hoge", storage.IntergerType)
 	tb.AddColumn("fuga", storage.IntergerType)
 	tb.AddColumn("piyo", storage.IntergerType)
@@ -51,7 +56,10 @@ func TestStorageEasy(t *testing.T) {
 func TestStorage(t *testing.T) {
 	storage.Reset()
 
-	tb := storage.NewTable()
+	fm := storage.NewFileMgr("testfile")
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	tb := storage.NewTable(fm, ptb)
 	tb.AddColumn("hoge", storage.IntergerType)
 	tb.AddColumn("fuga", storage.IntergerType)
 	tb.AddColumn("piyo", storage.IntergerType)
@@ -101,7 +109,10 @@ func TestStorage(t *testing.T) {
 func TestStorageChar(t *testing.T) {
 	storage.Reset()
 
-	countryTable := storage.NewTable()
+	fm := storage.NewFileMgr("testfile")
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	countryTable := storage.NewTable(fm, ptb)
 	countryTable.AddColumn("name", storage.CharType(10))
 	countryTable.AddColumn("continent", storage.CharType(15))
 	countryTable.Add("Japan", "Asia")
@@ -149,7 +160,10 @@ func TestStorageRestore(t *testing.T) {
 	createTable(t)
 	storage.Reset()
 
-	tb := storage.NewTableFromFIle()
+	fm := storage.NewFileMgr("testfile")
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	tb := storage.NewTableFromFile(fm, ptb)
 
 	res, err := tb.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
@@ -189,11 +203,15 @@ func TestStorageRestore(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	createTable(t)
 	storage.Reset()
-	tb := storage.NewTableFromFIle() // hogeがプライマリー
 
-	tb.Update("hoge", 2, "fuga", 33)
-	tb.Update("hoge", 10, "fuga", 44)
-	tb.Update("hoge", 10, "piyo", 4)
+	fm := storage.NewFileMgr("testfile")
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	tb := storage.NewTableFromFile(fm, ptb) // hogeがプライマリー
+
+	tb.Update(2, "fuga", 33)
+	tb.Update(10, "fuga", 44)
+	tb.Update(10, "piyo", 4)
 
 	res, err := tb.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
@@ -222,7 +240,7 @@ func TestUpdate(t *testing.T) {
 	if err != nil {
 		t.Error("failure select")
 	}
-	tb.Update("hoge", 2, "fuga", 333)
+	tb.Update(2, "fuga", 333)
 	if res[3][3].(int32) != 33 {
 		t.Errorf("expected: 33, actual: %d", res[3][3])
 	}
