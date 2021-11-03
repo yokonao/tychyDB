@@ -112,7 +112,12 @@ func (ptb *PageTable) unpin(blk BlockId) {
 	ptb.numOfPin--
 }
 
-func (ptb *PageTable) SetLSN(blk BlockId, lsn uint32) {
+func (ptb *PageTable) GetPageLSN(blk BlockId) uint32 {
+	buffId := ptb.getBuffId(blk)
+	return ptb.bm.pageAt(buffId).header.pageLSN
+}
+
+func (ptb *PageTable) SetPageLSN(blk BlockId, lsn uint32) {
 	buffId := ptb.getBuffId(blk)
 	ptb.bm.pageAt(buffId).header.pageLSN = lsn
 }

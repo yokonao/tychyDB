@@ -1,6 +1,8 @@
 package transaction
 
-import "github.com/tychyDB/storage"
+import (
+	"github.com/tychyDB/storage"
+)
 
 type RecoveryMgr struct {
 	txn   *Transaction
@@ -33,5 +35,5 @@ func (rm *RecoveryMgr) Abort() {
 func (rm *RecoveryMgr) Update(updateInfo storage.UpdateInfo) {
 	log := rm.lm.addLog(rm.txnId, UPDATE)
 	log.addUpdateInfo(updateInfo)
-	rm.ptb.SetLSN(storage.NewBlockId(updateInfo.PageIdx), log.lsn)
+	rm.ptb.SetPageLSN(storage.NewBlockId(updateInfo.PageIdx), log.lsn)
 }

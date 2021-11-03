@@ -105,5 +105,31 @@ func TestLogWrite(t *testing.T) {
 	updateInfo := tb.Update(2, "fuga", 33)
 	txn.Update(updateInfo)
 	txn.Commit()
-	lm.WritePage()
+}
+
+func TestLogLSN(t *testing.T) {
+	createTable(t)
+	storage.Reset()
+	logfm := storage.NewFileMgr("logfile")
+	fm := storage.NewFileMgr("testfile")
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	tb := storage.NewTableFromFile(fm, ptb)
+	lm := transaction.NewLogMgr(*logfm)
+	txn := transaction.NewTransaction(lm, ptb)
+
+	txn.Begin()
+	updateInfo := tb.Update(2, "fuga", 33)
+	txn.Update(updateInfo)
+
+	updateInfo = tb.Update(2, "fuga", 3335)
+
+	if ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)) != 2 {
+		t.Error("invalid pageLSN")
+	}
+	txn.Update(updateInfo)
+	if ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)) != 3 {
+		t.Error("invalid pageLSN")
+	}
+	txn.Commit()
 }
