@@ -16,6 +16,7 @@ func getUniqueTxnId() uint32 {
 
 type Transaction struct {
 	lm    *LogMgr
+	rm    *RecoveryMgr
 	txnId uint32
 }
 
@@ -23,24 +24,24 @@ func NewTransaction(lm *LogMgr) *Transaction {
 	txn := &Transaction{}
 	txn.txnId = getUniqueTxnId()
 	txn.lm = lm
+	txn.rm = NewRecoveryMgr(txn, txn.txnId, lm)
 	return txn
 }
 
 func (txn *Transaction) Begin() {
-	txn.lm.addLog(txn.txnId, BEGIN)
+	txn.rm.Begin()
 }
 
 func (txn *Transaction) Commit() {
-	txn.lm.addLog(txn.txnId, COMMIT)
+	txn.rm.Commit()
 }
 
 func (txn *Transaction) Abort() {
-	txn.lm.addLog(txn.txnId, ABORT)
+	txn.rm.Abort()
 }
 
 func (txn *Transaction) Update(updateInfo storage.UpdateInfo) {
-	log := txn.lm.addLog(txn.txnId, UPDATE)
-	log.addUpdateInfo(updateInfo)
+	txn.rm.Update(updateInfo)
 }
 
 //func (txn *Transaction) insert() {
