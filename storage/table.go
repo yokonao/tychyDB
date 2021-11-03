@@ -144,15 +144,14 @@ func (tb *Table) Add(args ...interface{}) error {
 	return nil
 }
 
-func (tb *Table) Update(prColName string, prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {
+func (tb *Table) GetPrimaryKey(prVal interface{}) {
+
+}
+
+func (tb *Table) Update(prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {
 	rootPage := ptb.pin(tb.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		panic(errors.New("unexpected"))
-	}
-
-	//　該当レコードを検索
-	if prColName != tb.cols[0].name {
-		panic(errors.New("input col is nor primary"))
 	}
 
 	// キーの計算

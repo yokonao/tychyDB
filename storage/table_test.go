@@ -196,9 +196,9 @@ func TestUpdate(t *testing.T) {
 	fm := storage.NewFileMgr("testfile")
 	tb := storage.NewTableFromFIle(fm) // hogeがプライマリー
 
-	tb.Update("hoge", 2, "fuga", 33)
-	tb.Update("hoge", 10, "fuga", 44)
-	tb.Update("hoge", 10, "piyo", 4)
+	tb.Update(2, "fuga", 33)
+	tb.Update(10, "fuga", 44)
+	tb.Update(10, "piyo", 4)
 
 	res, err := tb.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
@@ -227,7 +227,7 @@ func TestUpdate(t *testing.T) {
 	if err != nil {
 		t.Error("failure select")
 	}
-	tb.Update("hoge", 2, "fuga", 333)
+	tb.Update(2, "fuga", 333)
 	if res[3][3].(int32) != 33 {
 		t.Errorf("expected: 33, actual: %d", res[3][3])
 	}
