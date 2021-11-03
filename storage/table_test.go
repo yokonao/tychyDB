@@ -9,8 +9,8 @@ import (
 
 func createTable(t *testing.T) {
 	storage.Reset()
-
-	tb := storage.NewTable()
+	fm := storage.NewFileMgr("testfile")
+	tb := storage.NewTable(fm)
 	tb.AddColumn("hoge", storage.IntergerType)
 	tb.AddColumn("fuga", storage.IntergerType)
 	tb.AddColumn("piyo", storage.IntergerType)
@@ -36,8 +36,8 @@ func TestDebug(t *testing.T) {
 
 func TestStorageEasy(t *testing.T) {
 	storage.Reset()
-
-	tb := storage.NewTable()
+	fm := storage.NewFileMgr("testfile")
+	tb := storage.NewTable(fm)
 	tb.AddColumn("hoge", storage.IntergerType)
 	tb.AddColumn("fuga", storage.IntergerType)
 	tb.AddColumn("piyo", storage.IntergerType)
@@ -51,7 +51,8 @@ func TestStorageEasy(t *testing.T) {
 func TestStorage(t *testing.T) {
 	storage.Reset()
 
-	tb := storage.NewTable()
+	fm := storage.NewFileMgr("testfile")
+	tb := storage.NewTable(fm)
 	tb.AddColumn("hoge", storage.IntergerType)
 	tb.AddColumn("fuga", storage.IntergerType)
 	tb.AddColumn("piyo", storage.IntergerType)
@@ -101,7 +102,8 @@ func TestStorage(t *testing.T) {
 func TestStorageChar(t *testing.T) {
 	storage.Reset()
 
-	countryTable := storage.NewTable()
+	fm := storage.NewFileMgr("testfile")
+	countryTable := storage.NewTable(fm)
 	countryTable.AddColumn("name", storage.CharType(10))
 	countryTable.AddColumn("continent", storage.CharType(15))
 	countryTable.Add("Japan", "Asia")
@@ -149,7 +151,8 @@ func TestStorageRestore(t *testing.T) {
 	createTable(t)
 	storage.Reset()
 
-	tb := storage.NewTableFromFIle()
+	fm := storage.NewFileMgr("testfile")
+	tb := storage.NewTableFromFIle(fm)
 
 	res, err := tb.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
@@ -189,7 +192,9 @@ func TestStorageRestore(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	createTable(t)
 	storage.Reset()
-	tb := storage.NewTableFromFIle() // hogeがプライマリー
+
+	fm := storage.NewFileMgr("testfile")
+	tb := storage.NewTableFromFIle(fm) // hogeがプライマリー
 
 	tb.Update("hoge", 2, "fuga", 33)
 	tb.Update("hoge", 10, "fuga", 44)

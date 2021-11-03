@@ -10,27 +10,23 @@ import (
 	"github.com/tychyDB/algorithm"
 )
 
-var fm = NewFileMgr("testfile")
-var bm = newBufferMgr()
+var bm = newBufferMgr(NewFileMgr("testfile"))
 var ptb = newPageTable()
-
-func Clean() {
-	fm.Clean()
-}
 
 func Reset() {
 	UniqueBlockId = 0
-	bm = newBufferMgr()
+	bm = newBufferMgr(NewFileMgr("testfile"))
 	ptb = newPageTable()
 }
 
 type Table struct {
+	fm       *FileMgr
 	cols     []Column
 	rootBlk  BlockId
 	metaPage *MetaPage
 }
 
-func NewTable() Table {
+func NewTable(fm *FileMgr) Table {
 	t := Table{}
 	// テーブルのメタ情報を置くためのページ
 
@@ -39,7 +35,8 @@ func NewTable() Table {
 	if metaBlk.BlockNum != 0 {
 		panic(errors.New("place a meta page at the top of the file"))
 	}
-	fm.Write(metaBlk, t.metaPage.toBytes())
+	t.fm = fm
+	t.fm.Write(metaBlk, t.metaPage.toBytes())
 
 	// rootノード
 	root := newPage(false)
@@ -49,12 +46,13 @@ func NewTable() Table {
 	return t
 }
 
-func NewTableFromFIle() Table {
+func NewTableFromFIle(fm *FileMgr) Table {
 	t := Table{}
 	blk := newUniqueBlockId()
 	if blk.BlockNum != 0 {
 		panic(errors.New("expect 0"))
 	}
+	t.fm = fm
 	_, bytes := fm.Read(blk)
 	t.metaPage = newMetaPageFromBytes(bytes)
 	t.rootBlk = t.metaPage.rootBlk
@@ -64,7 +62,7 @@ func NewTableFromFIle() Table {
 
 func (tb *Table) Flush() {
 	ptb.flush()
-	fm.Write(tb.metaPage.metaBlk, tb.metaPage.toBytes())
+	tb.fm.Write(tb.metaPage.metaBlk, tb.metaPage.toBytes())
 }
 
 func (tb *Table) AddColumn(name string, ty Type) {

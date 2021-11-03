@@ -40,11 +40,13 @@ func (buff *Buffer) Print() {
 }
 
 type BufferMgr struct {
+	fm   *FileMgr
 	pool []*Buffer
 }
 
-func newBufferMgr() *BufferMgr {
+func newBufferMgr(fm *FileMgr) *BufferMgr {
 	bm := &BufferMgr{}
+	bm.fm = fm
 	bm.pool = make([]*Buffer, MaxBufferPoolSize)
 	return bm
 }
@@ -64,7 +66,7 @@ func (bm *BufferMgr) allocate(buff *Buffer) int {
 }
 
 func (bm *BufferMgr) load(blk BlockId) int {
-	n, bytes := fm.Read(blk)
+	n, bytes := bm.fm.Read(blk)
 	if n == 0 {
 		panic(errors.New("invalid BlockId was selected"))
 	}
@@ -82,7 +84,7 @@ func (bm *BufferMgr) load(blk BlockId) int {
 
 func (bm *BufferMgr) flush(buffId int) {
 	buff := bm.pool[buffId]
-	fm.Write(buff.blk, buff.page().toBytes())
+	bm.fm.Write(buff.blk, buff.page().toBytes())
 	bm.pool[buffId] = nil
 }
 
