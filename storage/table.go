@@ -144,18 +144,8 @@ func (tb *Table) Add(args ...interface{}) error {
 	return nil
 }
 
-func (tb *Table) GetPrimaryKey(prVal interface{}) {
-
-}
-
-func (tb *Table) Update(prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {
-	rootPage := ptb.pin(tb.rootBlk)
-	if rootPage.header.numOfPtr == 0 {
-		panic(errors.New("unexpected"))
-	}
-
-	// キーの計算
-	col := tb.cols[0]
+func (tb *Table) GetPrimaryKey(prVal interface{}) int32 {
+	col := tb.cols[0] // use index 0 as primary column for now
 	buf := make([]byte, col.ty.size)
 	if col.ty.id == integerId {
 		val := uint32(prVal.(int))
@@ -166,7 +156,14 @@ func (tb *Table) Update(prVal interface{}, targetColName string, replaceTo inter
 	} else {
 		panic(errors.New("the type of a column is not implemented"))
 	}
-	prKey := int32(binary.BigEndian.Uint32(buf[:IntSize]))
+	return int32(binary.BigEndian.Uint32(buf[:IntSize]))
+}
+
+func (tb *Table) SearchPrKey(prKey int32) BlockId {
+	rootPage := ptb.pin(tb.rootBlk)
+	if rootPage.header.numOfPtr == 0 {
+		panic(errors.New("unexpected"))
+	}
 	curBlk := tb.rootBlk
 	curPage := rootPage
 	for !curPage.header.isLeaf {
@@ -183,7 +180,15 @@ func (tb *Table) Update(prVal interface{}, targetColName string, replaceTo inter
 		curBlk = childBlk
 		curPage = childPage
 	}
+	ptb.unpin(curBlk)
+	return curBlk
+}
 
+func (tb *Table) Update(prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {
+	col := tb.cols[0] // use index 0 as primary column for now
+	prKey := tb.GetPrimaryKey(prVal)
+	curBlk := tb.SearchPrKey(prKey)
+	curPage := ptb.pin(curBlk)
 	// レコードの書き換え
 	// 対象のカラムを検索
 	targetColIndex := -1
