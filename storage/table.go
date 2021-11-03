@@ -10,23 +10,19 @@ import (
 	"github.com/tychyDB/algorithm"
 )
 
-var bm = newBufferMgr(NewFileMgr("testfile"))
-var ptb = newPageTable()
-
 func Reset() {
 	UniqueBlockId = 0
-	bm = newBufferMgr(NewFileMgr("testfile"))
-	ptb = newPageTable()
 }
 
 type Table struct {
 	fm       *FileMgr
+	ptb      *PageTable
 	cols     []Column
 	rootBlk  BlockId
 	metaPage *MetaPage
 }
 
-func NewTable(fm *FileMgr) Table {
+func NewTable(fm *FileMgr, ptb *PageTable) Table {
 	tb := Table{}
 	// テーブルのメタ情報を置くためのページ
 
@@ -38,6 +34,7 @@ func NewTable(fm *FileMgr) Table {
 	tb.fm = fm
 	tb.fm.Write(metaBlk, tb.metaPage.toBytes())
 
+	tb.ptb = ptb
 	// rootノード
 	root := newPage(false)
 	tb.rootBlk = newUniqueBlockId()
@@ -46,13 +43,14 @@ func NewTable(fm *FileMgr) Table {
 	return tb
 }
 
-func NewTableFromFIle(fm *FileMgr) Table {
+func NewTableFromFile(fm *FileMgr, ptb *PageTable) Table {
 	tb := Table{}
 	blk := newUniqueBlockId()
 	if blk.BlockNum != 0 {
 		panic(errors.New("expect 0"))
 	}
 	tb.fm = fm
+	tb.ptb = ptb
 	_, bytes := fm.Read(blk)
 	tb.metaPage = newMetaPageFromBytes(bytes)
 	tb.rootBlk = tb.metaPage.rootBlk
@@ -61,7 +59,7 @@ func NewTableFromFIle(fm *FileMgr) Table {
 }
 
 func (tb *Table) Flush() {
-	ptb.flush()
+	tb.ptb.flush()
 	tb.fm.Write(tb.metaPage.metaBlk, tb.metaPage.toBytes())
 }
 
@@ -78,25 +76,25 @@ func (tb *Table) AddColumn(name string, ty Type) {
 }
 
 func (tb *Table) addRecord(rec Record) {
-	rootPage := ptb.pin(tb.rootBlk)
+	rootPage := tb.ptb.pin(tb.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		pg := newPage(true)
 		blk := newUniqueBlockId()
-		ptb.set(blk, pg)
+		tb.ptb.set(blk, pg)
 		rootPage.cells = append(rootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: blk.BlockNum})
 		rootPage.header.rightmostPtr = 0
 		rootPage.header.numOfPtr++
 		pg.ptrs = append(pg.ptrs, 0)
 		pg.cells = append(pg.cells, KeyValueCell{key: rec.getKey(), rec: rec})
 		pg.header.numOfPtr++
-		ptb.unpin(tb.rootBlk)
+		tb.ptb.unpin(tb.rootBlk)
 	} else {
-		splitted, splitKey, leftPageIndex := rootPage.addRecordRec(rec)
+		splitted, splitKey, leftPageIndex := rootPage.addRecordRec(tb.ptb, rec)
 		if splitted {
 			newRootPage := newPage(false)
 			blk := newUniqueBlockId()
-			ptb.set(blk, newRootPage)
-			ptb.pin(blk)
+			tb.ptb.set(blk, newRootPage)
+			tb.ptb.pin(blk)
 			newRootPage.header.rightmostPtr = 0
 			newRootPage.ptrs = append(newRootPage.ptrs, 1)
 			newRootPage.cells = append(newRootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: tb.rootBlk.BlockNum})
@@ -105,7 +103,7 @@ func (tb *Table) addRecord(rec Record) {
 			tb.rootBlk = blk
 			tb.metaPage.rootBlk = blk
 		}
-		ptb.unpin(tb.rootBlk)
+		tb.ptb.unpin(tb.rootBlk)
 	}
 }
 
@@ -160,7 +158,7 @@ func (tb *Table) GetPrimaryKey(prVal interface{}) int32 {
 }
 
 func (tb *Table) SearchPrKey(prKey int32) BlockId {
-	rootPage := ptb.pin(tb.rootBlk)
+	rootPage := tb.ptb.pin(tb.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		panic(errors.New("unexpected"))
 	}
@@ -175,12 +173,12 @@ func (tb *Table) SearchPrKey(prKey int32) BlockId {
 			childBlkId = curPage.cells[curPage.ptrs[idx]].(KeyCell).pageIndex
 		}
 		childBlk := NewBlockId(childBlkId)
-		childPage := ptb.pin(childBlk)
-		ptb.unpin(curBlk)
+		childPage := tb.ptb.pin(childBlk)
+		tb.ptb.unpin(curBlk)
 		curBlk = childBlk
 		curPage = childPage
 	}
-	ptb.unpin(curBlk)
+	tb.ptb.unpin(curBlk)
 	return curBlk
 }
 
@@ -188,7 +186,7 @@ func (tb *Table) Update(prVal interface{}, targetColName string, replaceTo inter
 	col := tb.cols[0] // use index 0 as primary column for now
 	prKey := tb.GetPrimaryKey(prVal)
 	curBlk := tb.SearchPrKey(prKey)
-	curPage := ptb.pin(curBlk)
+	curPage := tb.ptb.pin(curBlk)
 	// レコードの書き換え
 	// 対象のカラムを検索
 	targetColIndex := -1
@@ -232,7 +230,7 @@ func (tb *Table) Update(prVal interface{}, targetColName string, replaceTo inter
 	copy(rec.data[targetCol.pos:targetCol.pos+targetCol.ty.size], toBuf)
 
 	curPage.cells[cellIdx] = KeyValueCell{key: rec.getKey(), rec: rec}
-
+	tb.ptb.unpin(curBlk)
 	// UpdateInfoの作成
 	updateInfo := NewUpdateInfo(curBlk.BlockNum, ptrIdx, uint32(targetColIndex), fromBuf, toBuf)
 	return updateInfo
@@ -246,7 +244,7 @@ func (tb *Table) selectInt(col Column) (res []interface{}, err error) {
 	pageQueue.Push(int(tb.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := ptb.read(NewBlockId(curPageIndex))
+		curPage := tb.ptb.read(NewBlockId(curPageIndex))
 		if curPage.header.isLeaf {
 			for _, ptr := range curPage.ptrs {
 				rec := curPage.cells[ptr].(KeyValueCell).rec
@@ -272,7 +270,7 @@ func (tb *Table) selectChar(col Column) (res []interface{}, err error) {
 	pageQueue.Push(int(tb.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := ptb.read(NewBlockId(curPageIndex))
+		curPage := tb.ptb.read(NewBlockId(curPageIndex))
 		if curPage.header.isLeaf {
 
 			for _, ptr := range curPage.ptrs {
@@ -342,7 +340,7 @@ func (tb *Table) Print() {
 	pageQueue.Push(int(tb.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := ptb.read(NewBlockId(curPageIndex))
+		curPage := tb.ptb.read(NewBlockId(curPageIndex))
 		fmt.Printf("Page Index is %d\n", curPageIndex)
 		curPage.info()
 		if !curPage.header.isLeaf {

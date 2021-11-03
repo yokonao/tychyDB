@@ -31,7 +31,7 @@ func (tb *Table) Viz(fname string) {
 
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := ptb.read(NewBlockId(curPageIndex))
+		curPage := tb.ptb.read(NewBlockId(curPageIndex))
 		parentIndex := parentMap[curPageIndex]
 		str := strconv.Itoa(int(curPageIndex)) + ", key:"
 		for _, ptr := range curPage.ptrs {

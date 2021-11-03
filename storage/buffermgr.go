@@ -44,7 +44,7 @@ type BufferMgr struct {
 	pool []*Buffer
 }
 
-func newBufferMgr(fm *FileMgr) *BufferMgr {
+func NewBufferMgr(fm *FileMgr) *BufferMgr {
 	bm := &BufferMgr{}
 	bm.fm = fm
 	bm.pool = make([]*Buffer, MaxBufferPoolSize)

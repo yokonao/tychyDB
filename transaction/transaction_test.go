@@ -19,7 +19,9 @@ func createTable(t *testing.T) {
 	storage.Reset()
 
 	fm := storage.NewFileMgr("testfile")
-	tb := storage.NewTable(fm)
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	tb := storage.NewTable(fm, ptb)
 	tb.AddColumn("hoge", storage.IntergerType)
 	tb.AddColumn("fuga", storage.IntergerType)
 	tb.AddColumn("piyo", storage.IntergerType)
@@ -40,7 +42,9 @@ func TestTxn(t *testing.T) {
 	logfm := storage.NewFileMgr("logfile")
 
 	fm := storage.NewFileMgr("testfile")
-	tb := storage.NewTableFromFIle(fm)
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	tb := storage.NewTableFromFile(fm, ptb)
 	lm := transaction.NewLogMgr(*logfm)
 	txn := transaction.NewTransaction(lm)
 	txn.Begin()
@@ -56,7 +60,10 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 	logfm := storage.NewFileMgr("logfile")
 
 	fm := storage.NewFileMgr("testfile")
-	tb := storage.NewTableFromFIle(fm)
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	tb := storage.NewTableFromFile(fm, ptb)
+
 	lm := transaction.NewLogMgr(*logfm)
 	txn := transaction.NewTransaction(lm)
 	txn.Begin()
@@ -88,7 +95,10 @@ func TestLogWrite(t *testing.T) {
 	logfm := storage.NewFileMgr("logfile")
 
 	fm := storage.NewFileMgr("testfile")
-	tb := storage.NewTableFromFIle(fm)
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	tb := storage.NewTableFromFile(fm, ptb)
+
 	lm := transaction.NewLogMgr(*logfm)
 	txn := transaction.NewTransaction(lm)
 	txn.Begin()

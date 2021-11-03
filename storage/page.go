@@ -130,7 +130,7 @@ func (pg *Page) needSplit() bool {
 	}
 }
 
-func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPageIndex uint32) {
+func (pg *Page) addRecordRec(ptb *PageTable, rec Record) (splitted bool, splitKey int32, leftPageIndex uint32) {
 	key := rec.getKey()
 	insert_idx := pg.locateLocally(key)
 	if pg.header.isLeaf {
@@ -151,7 +151,7 @@ func (pg *Page) addRecordRec(rec Record) (splitted bool, splitKey int32, leftPag
 		}
 		blk := NewBlockId(pageIndex)
 
-		splitted, splitKey, leftPageIndex := ptb.pin(blk).addRecordRec(rec)
+		splitted, splitKey, leftPageIndex := ptb.pin(blk).addRecordRec(ptb, rec)
 		if splitted {
 			if insert_idx == pg.header.numOfPtr {
 				// locatelocallyがrightmost ptrを返す時には
