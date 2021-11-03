@@ -39,7 +39,8 @@ func (txn *Transaction) Abort() {
 }
 
 func (txn *Transaction) Update(updateInfo storage.UpdateInfo) {
-	txn.lm.addLogForUpdate(txn.txnId, UPDATE, updateInfo)
+	log := txn.lm.addLog(txn.txnId, UPDATE)
+	log.addUpdateInfo(updateInfo)
 }
 
 //func (txn *Transaction) insert() {

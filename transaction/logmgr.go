@@ -1,8 +1,6 @@
 package transaction
 
 import (
-	"errors"
-
 	"github.com/tychyDB/storage"
 )
 
@@ -36,18 +34,10 @@ func (lm *LogMgr) getUniquePageNum() uint32 {
 	return res
 }
 
-func (lm *LogMgr) addLog(txnId, logType uint32) {
+func (lm *LogMgr) addLog(txnId, logType uint32) *Log {
 	log := newUniqueLog(lm.getUniqueLSN(), txnId, logType)
 	lm.LogPage.addLog(log)
-}
-
-func (lm *LogMgr) addLogForUpdate(txnId, logType uint32, updateInfo storage.UpdateInfo) {
-	if logType != UPDATE {
-		panic(errors.New("log type expected to be UPDATE"))
-	}
-	log := newUniqueLog(lm.getUniqueLSN(), logType, UPDATE)
-	log.updateInfo = updateInfo
-	lm.LogPage.addLog(log)
+	return log
 }
 
 func (lm *LogMgr) WritePage() {

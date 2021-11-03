@@ -46,6 +46,10 @@ func (log *Log) toBytes() []byte {
 	return gen.DumpBytes()[:actualLen]
 }
 
+func (log *Log) addUpdateInfo(updateInfo storage.UpdateInfo) {
+	log.updateInfo = updateInfo
+}
+
 func (log *Log) info() {
 	fmt.Printf("%7d, %7d, %7d, ", log.txnId, log.lsn, log.logType)
 	if log.logType == UPDATE {
