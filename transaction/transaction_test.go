@@ -46,7 +46,7 @@ func TestTxn(t *testing.T) {
 	ptb := storage.NewPageTable(bm)
 	tb := storage.NewTableFromFile(fm, ptb)
 	lm := transaction.NewLogMgr(*logfm)
-	txn := transaction.NewTransaction(lm)
+	txn := transaction.NewTransaction(lm, ptb)
 	txn.Begin()
 	updateInfo := tb.Update(2, "fuga", 33)
 	txn.Update(updateInfo)
@@ -65,7 +65,7 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 	tb := storage.NewTableFromFile(fm, ptb)
 
 	lm := transaction.NewLogMgr(*logfm)
-	txn := transaction.NewTransaction(lm)
+	txn := transaction.NewTransaction(lm, ptb)
 	txn.Begin()
 	updateInfo := tb.Update(2, "fuga", 33)
 	txn.Update(updateInfo)
@@ -100,7 +100,7 @@ func TestLogWrite(t *testing.T) {
 	tb := storage.NewTableFromFile(fm, ptb)
 
 	lm := transaction.NewLogMgr(*logfm)
-	txn := transaction.NewTransaction(lm)
+	txn := transaction.NewTransaction(lm, ptb)
 	txn.Begin()
 	updateInfo := tb.Update(2, "fuga", 33)
 	txn.Update(updateInfo)

@@ -3,16 +3,18 @@ package transaction
 import "github.com/tychyDB/storage"
 
 type RecoveryMgr struct {
-	lm    *LogMgr
 	txn   *Transaction
 	txnId uint32
+	lm    *LogMgr
+	ptb   *storage.PageTable
 }
 
-func NewRecoveryMgr(txn *Transaction, txnId uint32, lm *LogMgr) *RecoveryMgr {
+func NewRecoveryMgr(txn *Transaction, txnId uint32, lm *LogMgr, ptb *storage.PageTable) *RecoveryMgr {
 	rm := &RecoveryMgr{}
-	rm.lm = lm
 	rm.txn = txn
 	rm.txnId = txnId
+	rm.lm = lm
+	rm.ptb = ptb
 	return rm
 }
 
@@ -31,4 +33,5 @@ func (rm *RecoveryMgr) Abort() {
 func (rm *RecoveryMgr) Update(updateInfo storage.UpdateInfo) {
 	log := rm.lm.addLog(rm.txnId, UPDATE)
 	log.addUpdateInfo(updateInfo)
+	rm.ptb.SetLSN(storage.NewBlockId(updateInfo.PageIdx), log.lsn)
 }

@@ -112,6 +112,11 @@ func (ptb *PageTable) unpin(blk BlockId) {
 	ptb.numOfPin--
 }
 
+func (ptb *PageTable) SetLSN(blk BlockId, lsn uint32) {
+	buffId := ptb.getBuffId(blk)
+	ptb.bm.pageAt(buffId).header.pageLSN = lsn
+}
+
 func (ptb *PageTable) Print() {
 	fmt.Printf("Print Page table {\n")
 	fmt.Printf("table %v\n", ptb.table)
