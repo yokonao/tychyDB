@@ -131,5 +131,12 @@ func TestLogLSN(t *testing.T) {
 	if ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)) != 3 {
 		t.Error("invalid pageLSN")
 	}
+
+	tb.Flush()
+	storage.Reset()
+	tb = storage.NewTableFromFile(fm, ptb)
+	if ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)) != 3 {
+		t.Error("invalid pageLSN")
+	}
 	txn.Commit()
 }
