@@ -59,7 +59,7 @@ func NewTableFromFile(fm *FileMgr, ptb *PageTable) Table {
 }
 
 func (tb *Table) Flush() {
-	tb.ptb.flush()
+	tb.ptb.Flush()
 	tb.fm.Write(tb.metaPage.metaBlk, tb.metaPage.toBytes())
 }
 

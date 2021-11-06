@@ -26,7 +26,7 @@ func NewPageTable(bm *BufferMgr) *PageTable {
 	return ptb
 }
 
-func (ptb *PageTable) flush() {
+func (ptb *PageTable) Flush() {
 	for {
 		if ptb.queue.IsEmpty() {
 			break
