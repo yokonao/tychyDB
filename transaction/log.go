@@ -29,6 +29,14 @@ func newUniqueLog(lsn uint32, txnId uint32, logType uint32) *Log {
 	return log
 }
 
+func CopyLog(log Log) Log {
+	return Log{txnId: log.txnId, lsn: log.lsn, logType: log.logType}
+}
+
+func (log *Log) TxnID() uint32   { return log.txnId }
+func (log *Log) LSN() uint32     { return log.lsn }
+func (log *Log) LogType() uint32 { return log.logType }
+
 func (log *Log) toBytes() []byte {
 	gen := util.NewGenStruct(0, storage.PageSize)
 	actualLen := 3 * IntSize // len(log) is not constant

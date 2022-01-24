@@ -81,6 +81,13 @@ func (pg *LogPage) addLog(log *Log) {
 	pg.numLogs++
 }
 
+func (pg *LogPage) logAt(idx uint32) (Log, error) {
+	if idx < 0 || idx >= pg.numLogs {
+		return Log{}, ErrOutOfBounds
+	}
+	return CopyLog(*pg.logs[idx]), nil
+}
+
 func (pg *LogPage) maxLSN() (res uint32) {
 	if pg.numLogs == 0 {
 		panic(errors.New("logPage is empty"))

@@ -9,14 +9,14 @@ import (
 type LogMgr struct {
 	UniqueLSN     uint32
 	UniquePageNum uint32
-	LogPage       *LogPage // use UpperCase for test
+	LogPage       *LogPage // I used UpperCase for testing, but this should be lowerCamelCase.
 	fm            storage.FileMgr
 	FlashedLSN    uint32
 }
 
 func NewLogMgr(fm storage.FileMgr) *LogMgr {
 	logMgr := LogMgr{}
-	logMgr.UniqueLSN = 1
+	logMgr.UniqueLSN = 1 // 1-indexed, because flushed lsn is 0
 	logMgr.UniquePageNum = 0
 	logMgr.fm = fm
 	logMgr.FlashedLSN = 0
@@ -36,6 +36,10 @@ func NewLogMgrFromFile(fm storage.FileMgr) *LogMgr {
 	logMgr.FlashedLSN = logMgr.LogPage.maxLSN()
 	logMgr.UniqueLSN = logMgr.FlashedLSN + 1
 	return &logMgr
+}
+
+func (lm *LogMgr) logAt(idx uint32) (Log, error) {
+	return lm.LogPage.logAt(idx)
 }
 
 func (lm *LogMgr) getUniqueLSN() uint32 {
