@@ -7,34 +7,34 @@ import (
 	"github.com/tychyDB/storage"
 )
 
-func createTable(t *testing.T) {
+func createStorage(t *testing.T) {
 	storage.Reset()
 	fm := storage.NewFileMgr("testfile")
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 
-	tb := storage.NewTable(fm, ptb)
-	tb.AddColumn("hoge", storage.IntergerType)
-	tb.AddColumn("fuga", storage.IntergerType)
-	tb.AddColumn("piyo", storage.IntergerType)
-	tb.Add(2, -13, 89)
-	tb.Add(10000, 4, 44)
-	tb.Add(500, 5, 90)
-	tb.Add(10, 45, -999)
-	tb.Add(-345, 77, 43)
-	tb.Add(-100, 89, 111)
-	tb.Add(0, 0, 0)
-	tb.Add(80000, 10, 0)
-	tb.Flush()
+	st := storage.NewStorage(fm, ptb)
+	st.AddColumn("hoge", storage.IntergerType)
+	st.AddColumn("fuga", storage.IntergerType)
+	st.AddColumn("piyo", storage.IntergerType)
+	st.Add(2, -13, 89)
+	st.Add(10000, 4, 44)
+	st.Add(500, 5, 90)
+	st.Add(10, 45, -999)
+	st.Add(-345, 77, 43)
+	st.Add(-100, 89, 111)
+	st.Add(0, 0, 0)
+	st.Add(80000, 10, 0)
+	st.Flush()
 
-	_, err := tb.Select("hoge", "fuga", "piyo", "fuga")
+	_, err := st.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
 }
 
 func TestDebug(t *testing.T) {
-	createTable(t)
+	createStorage(t)
 }
 
 func TestStorageEasy(t *testing.T) {
@@ -42,16 +42,16 @@ func TestStorageEasy(t *testing.T) {
 	fm := storage.NewFileMgr("testfile")
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
-	tb := storage.NewTable(fm, ptb)
-	tb.AddColumn("hoge", storage.IntergerType)
-	tb.AddColumn("fuga", storage.IntergerType)
-	tb.AddColumn("piyo", storage.IntergerType)
+	st := storage.NewStorage(fm, ptb)
+	st.AddColumn("hoge", storage.IntergerType)
+	st.AddColumn("fuga", storage.IntergerType)
+	st.AddColumn("piyo", storage.IntergerType)
 
-	tb.Add(2, -13, 89)
-	tb.Add(10000, 4, 44)
-	tb.Add(500, 5, 90)
-	tb.Add(10000, 4, 44)
-	tb.Add(-345, 77, 43)
+	st.Add(2, -13, 89)
+	st.Add(10000, 4, 44)
+	st.Add(500, 5, 90)
+	st.Add(10000, 4, 44)
+	st.Add(-345, 77, 43)
 }
 func TestStorage(t *testing.T) {
 	storage.Reset()
@@ -59,19 +59,19 @@ func TestStorage(t *testing.T) {
 	fm := storage.NewFileMgr("testfile")
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
-	tb := storage.NewTable(fm, ptb)
-	tb.AddColumn("hoge", storage.IntergerType)
-	tb.AddColumn("fuga", storage.IntergerType)
-	tb.AddColumn("piyo", storage.IntergerType)
-	tb.Add(2, -13, 89)
-	tb.Add(10000, 4, 44)
-	tb.Add(500, 5, 90)
-	tb.Add(10, 45, -999)
-	tb.Add(-345, 77, 43)
-	tb.Add(-100, 89, 111)
-	tb.Add(0, 0, 0)
-	tb.Add(80000, 10, 0)
-	res, err := tb.Select("hoge", "fuga", "piyo", "fuga")
+	st := storage.NewStorage(fm, ptb)
+	st.AddColumn("hoge", storage.IntergerType)
+	st.AddColumn("fuga", storage.IntergerType)
+	st.AddColumn("piyo", storage.IntergerType)
+	st.Add(2, -13, 89)
+	st.Add(10000, 4, 44)
+	st.Add(500, 5, 90)
+	st.Add(10, 45, -999)
+	st.Add(-345, 77, 43)
+	st.Add(-100, 89, 111)
+	st.Add(0, 0, 0)
+	st.Add(80000, 10, 0)
+	res, err := st.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -87,8 +87,8 @@ func TestStorage(t *testing.T) {
 	if res[3][3].(int32) != -13 {
 		t.Errorf("expected: -13, actual: %d", res[3][3])
 	}
-	tb.Flush()
-	res, err = tb.Select("hoge", "fuga", "piyo", "fuga")
+	st.Flush()
+	res, err = st.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -112,7 +112,7 @@ func TestStorageChar(t *testing.T) {
 	fm := storage.NewFileMgr("testfile")
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
-	countryTable := storage.NewTable(fm, ptb)
+	countryTable := storage.NewStorage(fm, ptb)
 	countryTable.AddColumn("name", storage.CharType(10))
 	countryTable.AddColumn("continent", storage.CharType(15))
 	countryTable.Add("Japan", "Asia")
@@ -157,15 +157,15 @@ func TestStorageChar(t *testing.T) {
 }
 
 func TestStorageRestore(t *testing.T) {
-	createTable(t)
+	createStorage(t)
 	storage.Reset()
 
 	fm := storage.NewFileMgr("testfile")
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
-	tb := storage.NewTableFromFile(fm, ptb)
+	st := storage.NewStorageFromFile(fm, ptb)
 
-	res, err := tb.Select("hoge", "fuga", "piyo", "fuga")
+	res, err := st.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -181,8 +181,8 @@ func TestStorageRestore(t *testing.T) {
 	if res[3][3].(int32) != -13 {
 		t.Errorf("expected: -13, actual: %d", res[3][3])
 	}
-	tb.Flush()
-	res, err = tb.Select("hoge", "fuga", "piyo", "fuga")
+	st.Flush()
+	res, err = st.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -201,19 +201,19 @@ func TestStorageRestore(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	createTable(t)
+	createStorage(t)
 	storage.Reset()
 
 	fm := storage.NewFileMgr("testfile")
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
-	tb := storage.NewTableFromFile(fm, ptb) // hogeがプライマリー
+	st := storage.NewStorageFromFile(fm, ptb) // hogeがプライマリー
 
-	tb.Update(2, "fuga", 33)
-	tb.Update(10, "fuga", 44)
-	tb.Update(10, "piyo", 4)
+	st.Update(2, "fuga", 33)
+	st.Update(10, "fuga", 44)
+	st.Update(10, "piyo", 4)
 
-	res, err := tb.Select("hoge", "fuga", "piyo", "fuga")
+	res, err := st.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -236,11 +236,11 @@ func TestUpdate(t *testing.T) {
 	if res[2][4].(int32) != 4 {
 		t.Errorf("expected: 4, actual: %d", res[3][3])
 	}
-	res, err = tb.Select("hoge", "fuga", "piyo", "fuga")
+	res, err = st.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
-	tb.Update(2, "fuga", 333)
+	st.Update(2, "fuga", 333)
 	if res[3][3].(int32) != 33 {
 		t.Errorf("expected: 33, actual: %d", res[3][3])
 	}

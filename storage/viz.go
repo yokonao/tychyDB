@@ -9,7 +9,7 @@ import (
 	"github.com/tychyDB/algorithm"
 )
 
-func (tb *Table) Viz(fname string) {
+func (st *Storage) Viz(fname string) {
 	g := graphviz.New()
 	graph, err := g.Graph()
 	if err != nil {
@@ -25,13 +25,13 @@ func (tb *Table) Viz(fname string) {
 	nodeMap := make(map[uint32]*cgraph.Node)
 	parentMap := make(map[uint32]uint32)
 
-	pageQueue.Push(int(tb.rootBlk.BlockNum))
+	pageQueue.Push(int(st.rootBlk.BlockNum))
 
-	parentMap[tb.rootBlk.BlockNum] = tb.rootBlk.BlockNum
+	parentMap[st.rootBlk.BlockNum] = st.rootBlk.BlockNum
 
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := tb.ptb.read(NewBlockId(curPageIndex))
+		curPage := st.ptb.read(NewBlockId(curPageIndex))
 		parentIndex := parentMap[curPageIndex]
 		str := strconv.Itoa(int(curPageIndex)) + ", key:"
 		for _, ptr := range curPage.ptrs {

@@ -14,37 +14,37 @@ func cleanDisk(t *testing.T) {
 	os.Remove(diskDir + "/logfile")
 }
 
-func createTable(t *testing.T) {
+func createStorage(t *testing.T) {
 	cleanDisk(t)
 	storage.Reset()
 
 	fm := storage.NewFileMgr("testfile")
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
-	tb := storage.NewTable(fm, ptb)
-	tb.AddColumn("hoge", storage.IntergerType)
-	tb.AddColumn("fuga", storage.IntergerType)
-	tb.AddColumn("piyo", storage.IntergerType)
-	tb.Add(2, -13, 89)
-	tb.Add(10000, 4, 44)
-	tb.Add(500, 5, 90)
-	tb.Add(10, 45, -999)
-	tb.Add(-345, 77, 43)
-	tb.Add(-100, 89, 111)
-	tb.Add(0, 0, 0)
-	tb.Add(80000, 10, 0)
-	tb.Flush()
+	st := storage.NewStorage(fm, ptb)
+	st.AddColumn("hoge", storage.IntergerType)
+	st.AddColumn("fuga", storage.IntergerType)
+	st.AddColumn("piyo", storage.IntergerType)
+	st.Add(2, -13, 89)
+	st.Add(10000, 4, 44)
+	st.Add(500, 5, 90)
+	st.Add(10, 45, -999)
+	st.Add(-345, 77, 43)
+	st.Add(-100, 89, 111)
+	st.Add(0, 0, 0)
+	st.Add(80000, 10, 0)
+	st.Flush()
 }
 
 func TestTxn(t *testing.T) {
-	createTable(t)
+	createStorage(t)
 	storage.Reset()
 	logfm := storage.NewFileMgr("logfile")
 
 	fm := storage.NewFileMgr("testfile")
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
-	tb := storage.NewTableFromFile(fm, ptb)
+	tb := storage.NewStorageFromFile(fm, ptb)
 	lm := transaction.NewLogMgr(*logfm)
 	txn := transaction.NewTransaction(lm, ptb)
 	txn.Begin()
@@ -55,19 +55,19 @@ func TestTxn(t *testing.T) {
 }
 
 func TestLogSerializeDeSerialize(t *testing.T) {
-	createTable(t)
+	createStorage(t)
 	storage.Reset()
 	logfm := storage.NewFileMgr("logfile")
 
 	fm := storage.NewFileMgr("testfile")
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
-	tb := storage.NewTableFromFile(fm, ptb)
+	st := storage.NewStorageFromFile(fm, ptb)
 
 	lm := transaction.NewLogMgr(*logfm)
 	txn := transaction.NewTransaction(lm, ptb)
 	txn.Begin()
-	updateInfo := tb.Update(2, "fuga", 33)
+	updateInfo := st.Update(2, "fuga", 33)
 	txn.Update(updateInfo)
 	txn.Commit()
 
@@ -90,14 +90,14 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 }
 
 func TestLogWrite(t *testing.T) {
-	createTable(t)
+	createStorage(t)
 	storage.Reset()
 	logfm := storage.NewFileMgr("logfile")
 
 	fm := storage.NewFileMgr("testfile")
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
-	tb := storage.NewTableFromFile(fm, ptb)
+	tb := storage.NewStorageFromFile(fm, ptb)
 
 	lm := transaction.NewLogMgr(*logfm)
 	txn := transaction.NewTransaction(lm, ptb)
@@ -108,13 +108,13 @@ func TestLogWrite(t *testing.T) {
 }
 
 func TestLogLSN(t *testing.T) {
-	createTable(t)
+	createStorage(t)
 	storage.Reset()
 	logfm := storage.NewFileMgr("logfile")
 	fm := storage.NewFileMgr("testfile")
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
-	tb := storage.NewTableFromFile(fm, ptb)
+	tb := storage.NewStorageFromFile(fm, ptb)
 	lm := transaction.NewLogMgr(*logfm)
 	txn := transaction.NewTransaction(lm, ptb)
 
@@ -134,7 +134,7 @@ func TestLogLSN(t *testing.T) {
 
 	tb.Flush()
 	storage.Reset()
-	tb = storage.NewTableFromFile(fm, ptb)
+	tb = storage.NewStorageFromFile(fm, ptb)
 	if ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)) != 3 {
 		t.Error("invalid pageLSN")
 	}

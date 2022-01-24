@@ -14,7 +14,7 @@ func Reset() {
 	UniqueBlockId = 0
 }
 
-type Table struct {
+type Storage struct {
 	fm       *FileMgr
 	ptb      *PageTable
 	cols     []Column
@@ -22,88 +22,88 @@ type Table struct {
 	metaPage *MetaPage
 }
 
-func NewTable(fm *FileMgr, ptb *PageTable) Table {
-	tb := Table{}
+func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
+	st := Storage{}
 	// テーブルのメタ情報を置くためのページ
 
 	metaBlk := newUniqueBlockId()
-	tb.metaPage = newMetaPage(metaBlk)
+	st.metaPage = newMetaPage(metaBlk)
 	if metaBlk.BlockNum != 0 {
 		panic(errors.New("place a meta page at the top of the file"))
 	}
-	tb.fm = fm
-	tb.fm.Write(metaBlk, tb.metaPage.toBytes())
+	st.fm = fm
+	st.fm.Write(metaBlk, st.metaPage.toBytes())
 
-	tb.ptb = ptb
+	st.ptb = ptb
 	// rootノード
 	root := newPage(false)
-	tb.rootBlk = newUniqueBlockId()
-	ptb.set(tb.rootBlk, root)
-	tb.metaPage.rootBlk = tb.rootBlk
-	return tb
+	st.rootBlk = newUniqueBlockId()
+	ptb.set(st.rootBlk, root)
+	st.metaPage.rootBlk = st.rootBlk
+	return st
 }
 
-func NewTableFromFile(fm *FileMgr, ptb *PageTable) Table {
-	tb := Table{}
+func NewStorageFromFile(fm *FileMgr, ptb *PageTable) Storage {
+	st := Storage{}
 	blk := newUniqueBlockId()
 	if blk.BlockNum != 0 {
 		panic(errors.New("expect 0"))
 	}
-	tb.fm = fm
-	tb.ptb = ptb
+	st.fm = fm
+	st.ptb = ptb
 	_, bytes := fm.Read(blk)
-	tb.metaPage = newMetaPageFromBytes(bytes)
-	tb.rootBlk = tb.metaPage.rootBlk
-	tb.cols = tb.metaPage.cols
-	return tb
+	st.metaPage = newMetaPageFromBytes(bytes)
+	st.rootBlk = st.metaPage.rootBlk
+	st.cols = st.metaPage.cols
+	return st
 }
 
-func (tb *Table) Flush() {
-	tb.ptb.Flush()
-	tb.fm.Write(tb.metaPage.metaBlk, tb.metaPage.toBytes())
+func (st *Storage) Flush() {
+	st.ptb.Flush()
+	st.fm.Write(st.metaPage.metaBlk, st.metaPage.toBytes())
 }
 
-func (tb *Table) AddColumn(name string, ty Type) {
+func (st *Storage) AddColumn(name string, ty Type) {
 	var pos uint32
-	if len(tb.cols) == 0 {
+	if len(st.cols) == 0 {
 		pos = 0
 	} else {
-		last := tb.cols[len(tb.cols)-1]
+		last := st.cols[len(st.cols)-1]
 		pos = last.pos + last.ty.size
 	}
-	tb.cols = append(tb.cols, Column{ty: ty, name: name, pos: pos})
-	tb.metaPage.cols = append(tb.cols, Column{ty: ty, name: name, pos: pos})
+	st.cols = append(st.cols, Column{ty: ty, name: name, pos: pos})
+	st.metaPage.cols = append(st.cols, Column{ty: ty, name: name, pos: pos})
 }
 
-func (tb *Table) addRecord(rec Record) {
-	rootPage := tb.ptb.pin(tb.rootBlk)
+func (st *Storage) addRecord(rec Record) {
+	rootPage := st.ptb.pin(st.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		pg := newPage(true)
 		blk := newUniqueBlockId()
-		tb.ptb.set(blk, pg)
+		st.ptb.set(blk, pg)
 		rootPage.cells = append(rootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: blk.BlockNum})
 		rootPage.header.rightmostPtr = 0
 		rootPage.header.numOfPtr++
 		pg.ptrs = append(pg.ptrs, 0)
 		pg.cells = append(pg.cells, KeyValueCell{key: rec.getKey(), rec: rec})
 		pg.header.numOfPtr++
-		tb.ptb.unpin(tb.rootBlk)
+		st.ptb.unpin(st.rootBlk)
 	} else {
-		splitted, splitKey, leftPageIndex := rootPage.addRecordRec(tb.ptb, rec)
+		splitted, splitKey, leftPageIndex := rootPage.addRecordRec(st.ptb, rec)
 		if splitted {
 			newRootPage := newPage(false)
 			blk := newUniqueBlockId()
-			tb.ptb.set(blk, newRootPage)
-			tb.ptb.pin(blk)
+			st.ptb.set(blk, newRootPage)
+			st.ptb.pin(blk)
 			newRootPage.header.rightmostPtr = 0
 			newRootPage.ptrs = append(newRootPage.ptrs, 1)
-			newRootPage.cells = append(newRootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: tb.rootBlk.BlockNum})
+			newRootPage.cells = append(newRootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: st.rootBlk.BlockNum})
 			newRootPage.cells = append(newRootPage.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
 			newRootPage.header.numOfPtr += 2
-			tb.rootBlk = blk
-			tb.metaPage.rootBlk = blk
+			st.rootBlk = blk
+			st.metaPage.rootBlk = blk
 		}
-		tb.ptb.unpin(tb.rootBlk)
+		st.ptb.unpin(st.rootBlk)
 	}
 }
 
@@ -133,17 +133,17 @@ func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
 	return
 }
 
-func (tb *Table) Add(args ...interface{}) error {
-	bytes, err := encode(tb.cols, args...)
+func (st *Storage) Add(args ...interface{}) error {
+	bytes, err := encode(st.cols, args...)
 	if err != nil {
 		return err
 	}
-	tb.addRecord(Record{size: uint32(len(bytes)), data: bytes})
+	st.addRecord(Record{size: uint32(len(bytes)), data: bytes})
 	return nil
 }
 
-func (tb *Table) GetPrimaryKey(prVal interface{}) int32 {
-	col := tb.cols[0] // use index 0 as primary column for now
+func (st *Storage) GetPrimaryKey(prVal interface{}) int32 {
+	col := st.cols[0] // use index 0 as primary column for now
 	buf := make([]byte, col.ty.size)
 	if col.ty.id == integerId {
 		val := uint32(prVal.(int))
@@ -157,12 +157,12 @@ func (tb *Table) GetPrimaryKey(prVal interface{}) int32 {
 	return int32(binary.BigEndian.Uint32(buf[:IntSize]))
 }
 
-func (tb *Table) SearchPrKey(prKey int32) BlockId {
-	rootPage := tb.ptb.pin(tb.rootBlk)
+func (st *Storage) SearchPrKey(prKey int32) BlockId {
+	rootPage := st.ptb.pin(st.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		panic(errors.New("unexpected"))
 	}
-	curBlk := tb.rootBlk
+	curBlk := st.rootBlk
 	curPage := rootPage
 	for !curPage.header.isLeaf {
 		idx := curPage.locateLocally(prKey)
@@ -173,24 +173,24 @@ func (tb *Table) SearchPrKey(prKey int32) BlockId {
 			childBlkId = curPage.cells[curPage.ptrs[idx]].(KeyCell).pageIndex
 		}
 		childBlk := NewBlockId(childBlkId)
-		childPage := tb.ptb.pin(childBlk)
-		tb.ptb.unpin(curBlk)
+		childPage := st.ptb.pin(childBlk)
+		st.ptb.unpin(curBlk)
 		curBlk = childBlk
 		curPage = childPage
 	}
-	tb.ptb.unpin(curBlk)
+	st.ptb.unpin(curBlk)
 	return curBlk
 }
 
-func (tb *Table) Update(prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {
-	col := tb.cols[0] // use index 0 as primary column for now
-	prKey := tb.GetPrimaryKey(prVal)
-	curBlk := tb.SearchPrKey(prKey)
-	curPage := tb.ptb.pin(curBlk)
+func (st *Storage) Update(prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {
+	col := st.cols[0] // use index 0 as primary column for now
+	prKey := st.GetPrimaryKey(prVal)
+	curBlk := st.SearchPrKey(prKey)
+	curPage := st.ptb.pin(curBlk)
 	// レコードの書き換え
 	// 対象のカラムを検索
 	targetColIndex := -1
-	for i, c := range tb.cols {
+	for i, c := range st.cols {
 		if c.name == targetColName {
 			targetColIndex = i
 		}
@@ -202,7 +202,7 @@ func (tb *Table) Update(prVal interface{}, targetColName string, replaceTo inter
 		panic(errors.New("invalid target column name"))
 	}
 
-	targetCol := tb.cols[targetColIndex]
+	targetCol := st.cols[targetColIndex]
 
 	// 該当レコードを取得
 	ptrIdx := curPage.locateLocally(prKey)
@@ -230,21 +230,21 @@ func (tb *Table) Update(prVal interface{}, targetColName string, replaceTo inter
 	copy(rec.data[targetCol.pos:targetCol.pos+targetCol.ty.size], toBuf)
 
 	curPage.cells[cellIdx] = KeyValueCell{key: rec.getKey(), rec: rec}
-	tb.ptb.unpin(curBlk)
+	st.ptb.unpin(curBlk)
 	// UpdateInfoの作成
 	updateInfo := NewUpdateInfo(curBlk.BlockNum, ptrIdx, uint32(targetColIndex), fromBuf, toBuf)
 	return updateInfo
 }
 
-func (tb *Table) selectInt(col Column) (res []interface{}, err error) {
+func (st *Storage) selectInt(col Column) (res []interface{}, err error) {
 	if col.ty.id != integerId {
 		return nil, errors.New("you must specify int type column")
 	}
 	pageQueue := algorithm.NewQueue(64)
-	pageQueue.Push(int(tb.rootBlk.BlockNum))
+	pageQueue.Push(int(st.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := tb.ptb.read(NewBlockId(curPageIndex))
+		curPage := st.ptb.read(NewBlockId(curPageIndex))
 		if curPage.header.isLeaf {
 			for _, ptr := range curPage.ptrs {
 				rec := curPage.cells[ptr].(KeyValueCell).rec
@@ -261,16 +261,16 @@ func (tb *Table) selectInt(col Column) (res []interface{}, err error) {
 	return
 }
 
-func (tb *Table) selectChar(col Column) (res []interface{}, err error) {
+func (st *Storage) selectChar(col Column) (res []interface{}, err error) {
 
 	if col.ty.id != charId {
 		return nil, errors.New("you must specify int type column")
 	}
 	pageQueue := algorithm.NewQueue(64)
-	pageQueue.Push(int(tb.rootBlk.BlockNum))
+	pageQueue.Push(int(st.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := tb.ptb.read(NewBlockId(curPageIndex))
+		curPage := st.ptb.read(NewBlockId(curPageIndex))
 		if curPage.header.isLeaf {
 
 			for _, ptr := range curPage.ptrs {
@@ -289,21 +289,21 @@ func (tb *Table) selectChar(col Column) (res []interface{}, err error) {
 	return
 }
 
-func (tb *Table) Select(names ...string) (res [][]interface{}, err error) {
+func (st *Storage) Select(names ...string) (res [][]interface{}, err error) {
 	for _, name := range names {
-		for _, col := range tb.cols {
+		for _, col := range st.cols {
 			if name != col.name {
 				continue
 			}
 			if col.ty.id == integerId {
-				values, err := tb.selectInt(col)
+				values, err := st.selectInt(col)
 				if err != nil {
 					return nil, err
 				}
 				res = append(res, values)
 				break
 			} else if col.ty.id == charId {
-				values, err := tb.selectChar(col)
+				values, err := st.selectChar(col)
 				if err != nil {
 					return nil, err
 				}
@@ -334,13 +334,13 @@ func (tb *Table) Select(names ...string) (res [][]interface{}, err error) {
 	return res, nil
 }
 
-func (tb *Table) Print() {
+func (st *Storage) Print() {
 	fmt.Println("--- start table print ---")
 	pageQueue := algorithm.NewQueue(64)
-	pageQueue.Push(int(tb.rootBlk.BlockNum))
+	pageQueue.Push(int(st.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := tb.ptb.read(NewBlockId(curPageIndex))
+		curPage := st.ptb.read(NewBlockId(curPageIndex))
 		fmt.Printf("Page Index is %d\n", curPageIndex)
 		curPage.info()
 		if !curPage.header.isLeaf {
