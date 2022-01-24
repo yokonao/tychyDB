@@ -46,11 +46,13 @@ func TestTxn(t *testing.T) {
 	ptb := storage.NewPageTable(bm)
 	tb := storage.NewStorageFromFile(fm, ptb)
 	lm := transaction.NewLogMgr(*logfm)
-	txn := transaction.NewTransaction(lm, ptb)
-	txn.Begin()
+	rm := transaction.NewRecoveryMgr(lm, ptb)
+
+	txn := transaction.NewTransaction()
+	rm.Begin(txn)
 	updateInfo := tb.Update(2, "fuga", 33)
-	txn.Update(updateInfo)
-	txn.Commit()
+	rm.Update(txn, updateInfo)
+	rm.Commit(txn)
 	lm.Print()
 }
 
@@ -63,13 +65,14 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
-
 	lm := transaction.NewLogMgr(*logfm)
-	txn := transaction.NewTransaction(lm, ptb)
-	txn.Begin()
+	rm := transaction.NewRecoveryMgr(lm, ptb)
+	txn := transaction.NewTransaction()
+
+	rm.Begin(txn)
 	updateInfo := st.Update(2, "fuga", 33)
-	txn.Update(updateInfo)
-	txn.Commit()
+	rm.Update(txn, updateInfo)
+	rm.Commit(txn)
 
 	lm.Print()
 	// test log manager serialize deserialize
@@ -89,24 +92,6 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 	}
 }
 
-func TestLogWrite(t *testing.T) {
-	createStorage(t)
-	storage.Reset()
-	logfm := storage.NewFileMgr("logfile")
-
-	fm := storage.NewFileMgr("testfile")
-	bm := storage.NewBufferMgr(fm)
-	ptb := storage.NewPageTable(bm)
-	tb := storage.NewStorageFromFile(fm, ptb)
-
-	lm := transaction.NewLogMgr(*logfm)
-	txn := transaction.NewTransaction(lm, ptb)
-	txn.Begin()
-	updateInfo := tb.Update(2, "fuga", 33)
-	txn.Update(updateInfo)
-	txn.Commit()
-}
-
 func TestLogLSN(t *testing.T) {
 	createStorage(t)
 	storage.Reset()
@@ -116,28 +101,29 @@ func TestLogLSN(t *testing.T) {
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
 	lm := transaction.NewLogMgr(*logfm)
-	txn := transaction.NewTransaction(lm, ptb)
+	rm := transaction.NewRecoveryMgr(lm, ptb)
+	txn := transaction.NewTransaction()
 
-	txn.Begin()
+	rm.Begin(txn)
 	updateInfo := st.Update(2, "fuga", 33)
-	txn.Update(updateInfo)
+	rm.Update(txn, updateInfo)
 
 	updateInfo = st.Update(2, "fuga", 3335)
 
-	if ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)) != 2 {
-		t.Error("invalid pageLSN")
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)); val != 2 {
+		t.Errorf("invalid pageLSN expect %d got %d", 2, val)
 	}
-	txn.Update(updateInfo)
-	if ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)) != 3 {
-		t.Error("invalid pageLSN")
+	rm.Update(txn, updateInfo)
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)); val != 3 {
+		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
 	}
 
 	st.Flush()
 	storage.Reset()
 	st = storage.NewStorageFromFile(fm, ptb)
-	if ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)) != 3 {
-		t.Error("invalid pageLSN")
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)); val != 3 {
+		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
 	}
-	txn.Commit()
+	rm.Commit(txn)
 
 }

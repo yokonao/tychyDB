@@ -5,35 +5,31 @@ import (
 )
 
 type RecoveryMgr struct {
-	txn   *Transaction
-	txnId uint32
-	lm    *LogMgr
-	ptb   *storage.PageTable
+	lm  *LogMgr
+	ptb *storage.PageTable
 }
 
-func NewRecoveryMgr(txn *Transaction, txnId uint32, lm *LogMgr, ptb *storage.PageTable) *RecoveryMgr {
+func NewRecoveryMgr(lm *LogMgr, ptb *storage.PageTable) *RecoveryMgr {
 	rm := &RecoveryMgr{}
-	rm.txn = txn
-	rm.txnId = txnId
 	rm.lm = lm
 	rm.ptb = ptb
 	return rm
 }
 
-func (rm *RecoveryMgr) Begin() {
-	rm.lm.addLog(rm.txnId, BEGIN)
+func (rm *RecoveryMgr) Begin(txn *Transaction) {
+	rm.lm.addLog(txn.txnId, BEGIN)
 }
 
-func (rm *RecoveryMgr) Commit() {
-	rm.lm.addLog(rm.txnId, COMMIT)
+func (rm *RecoveryMgr) Commit(txn *Transaction) {
+	rm.lm.addLog(txn.txnId, COMMIT)
 	rm.lm.WritePage()
 }
-func (rm *RecoveryMgr) Abort() {
-	rm.lm.addLog(rm.txnId, ABORT)
+func (rm *RecoveryMgr) Abort(txn *Transaction) {
+	rm.lm.addLog(txn.txnId, ABORT)
 }
 
-func (rm *RecoveryMgr) Update(updateInfo storage.UpdateInfo) {
-	log := rm.lm.addLog(rm.txnId, UPDATE)
+func (rm *RecoveryMgr) Update(txn *Transaction, updateInfo storage.UpdateInfo) {
+	log := rm.lm.addLog(txn.txnId, UPDATE)
 	log.addUpdateInfo(updateInfo)
 	rm.ptb.SetPageLSN(storage.NewBlockId(updateInfo.PageIdx), log.lsn)
 }
