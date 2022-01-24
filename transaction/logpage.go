@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/tychyDB/storage"
@@ -80,6 +81,19 @@ func (pg *LogPage) addLog(log *Log) {
 	pg.numLogs++
 }
 
+func (pg *LogPage) maxLSN() (res uint32) {
+	if pg.numLogs == 0 {
+		panic(errors.New("logPage is empty"))
+	}
+
+	res = 0
+	for _, l := range pg.logs {
+		if l.lsn > res {
+			res = l.lsn
+		}
+	}
+	return
+}
 func (pg *LogPage) Print() {
 	fmt.Println("txnId  ,     lsn, logType, pageIdx,  ptrIdx,   colNum,    from,      to")
 	for i := 0; i < int(pg.numLogs); i++ {
