@@ -114,15 +114,15 @@ func TestLogLSN(t *testing.T) {
 	fm := storage.NewFileMgr("testfile")
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
-	tb := storage.NewStorageFromFile(fm, ptb)
+	st := storage.NewStorageFromFile(fm, ptb)
 	lm := transaction.NewLogMgr(*logfm)
 	txn := transaction.NewTransaction(lm, ptb)
 
 	txn.Begin()
-	updateInfo := tb.Update(2, "fuga", 33)
+	updateInfo := st.Update(2, "fuga", 33)
 	txn.Update(updateInfo)
 
-	updateInfo = tb.Update(2, "fuga", 3335)
+	updateInfo = st.Update(2, "fuga", 3335)
 
 	if ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)) != 2 {
 		t.Error("invalid pageLSN")
@@ -132,11 +132,12 @@ func TestLogLSN(t *testing.T) {
 		t.Error("invalid pageLSN")
 	}
 
-	tb.Flush()
+	st.Flush()
 	storage.Reset()
-	tb = storage.NewStorageFromFile(fm, ptb)
+	st = storage.NewStorageFromFile(fm, ptb)
 	if ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)) != 3 {
 		t.Error("invalid pageLSN")
 	}
 	txn.Commit()
+
 }
