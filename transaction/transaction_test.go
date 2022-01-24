@@ -37,6 +37,7 @@ func createStorage(t *testing.T) {
 }
 
 func TestTxn(t *testing.T) {
+	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.Reset()
 	logfm := storage.NewFileMgr("logfile")
@@ -57,6 +58,7 @@ func TestTxn(t *testing.T) {
 }
 
 func TestLogSerializeDeSerialize(t *testing.T) {
+	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.Reset()
 	logfm := storage.NewFileMgr("logfile")
@@ -93,6 +95,7 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 }
 
 func TestLogLSN(t *testing.T) {
+	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.Reset()
 	logfm := storage.NewFileMgr("logfile")
@@ -129,6 +132,7 @@ func TestLogLSN(t *testing.T) {
 }
 
 func TestLogLSNCC(t *testing.T) {
+	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.Reset()
 	logfm := storage.NewFileMgr("logfile")
@@ -164,6 +168,80 @@ func TestLogLSNCC(t *testing.T) {
 	st = storage.NewStorageFromFile(fm, ptb)
 	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)); val != 4 {
 		t.Errorf("invalid pageLSN expect %d got %d", 4, val)
+	}
+	lm.Print()
+}
+
+func TestLogIter(t *testing.T) {
+	transaction.UniqueTxnId = 0
+	createStorage(t)
+	storage.Reset()
+	logfm := storage.NewFileMgr("logfile")
+	fm := storage.NewFileMgr("testfile")
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	lm := transaction.NewLogMgr(*logfm)
+	rm := transaction.NewRecoveryMgr(lm, ptb)
+
+	txnA := transaction.NewTransaction()
+	txnB := transaction.NewTransaction()
+
+	rm.Begin(txnA)
+	rm.Begin(txnB)
+	rm.Abort(txnB)
+	rm.Commit(txnA)
+	lm.Print()
+
+	logIter := transaction.NewLogIter(lm, 0)
+	log, _ := logIter.Next()
+	if val := log.LSN(); val != 1 {
+		t.Errorf("invalid LSN expect %d got %d", 1, val)
+	}
+
+	if val := log.TxnID(); val != 0 {
+		t.Errorf("invalid TxnID expect %d got %d", 0, val)
+	}
+
+	if val := log.LogType(); val != 0 {
+		t.Errorf("invalid LogType expect %d got %d", 0, val)
+	}
+
+	log, _ = logIter.Next()
+	if val := log.LSN(); val != 2 {
+		t.Errorf("invalid LSN expect %d got %d", 2, val)
+	}
+	if val := log.TxnID(); val != 1 {
+		t.Errorf("invalid TxnID expect %d got %d", 1, val)
+	}
+	if val := log.LogType(); val != 0 {
+		t.Errorf("invalid LogType expect %d got %d", 0, val)
+	}
+
+	log, _ = logIter.Next()
+	if val := log.LSN(); val != 3 {
+		t.Errorf("invalid LSN expect %d got %d", 3, val)
+	}
+	if val := log.TxnID(); val != 1 {
+		t.Errorf("invalid TxnID expect %d got %d", 1, val)
+	}
+	if val := log.LogType(); val != 2 {
+		t.Errorf("invalid LogType expect %d got %d", 2, val)
+	}
+
+	log, _ = logIter.Next()
+	if val := log.LSN(); val != 4 {
+		t.Errorf("invalid LSN expect %d got %d", 4, val)
+	}
+	if val := log.TxnID(); val != 0 {
+		t.Errorf("invalid TxnID expect %d got %d", 0, val)
+	}
+	if val := log.LogType(); val != 3 {
+		t.Errorf("invalid LogType expect %d got %d", 3, val)
+	}
+
+	log, err := logIter.Next()
+	if err != transaction.ErrOutOfBounds {
+		t.Errorf("expected ErrOutOfBounds got %v", err)
 	}
 
 }
