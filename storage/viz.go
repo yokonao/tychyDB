@@ -31,7 +31,7 @@ func (st *Storage) Viz(fname string) {
 
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := st.ptb.read(NewBlockId(curPageIndex))
+		curPage := st.ptb.read(NewBlockId(curPageIndex, StorageFile))
 		parentIndex := parentMap[curPageIndex]
 		str := strconv.Itoa(int(curPageIndex)) + ", key:"
 		for _, ptr := range curPage.ptrs {

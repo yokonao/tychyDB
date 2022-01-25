@@ -3,30 +3,53 @@ package storage
 import (
 	"errors"
 	"os"
+	"path/filepath"
+)
+
+var (
+	ErrFileOpen      = errors.New("I/O error while opening file")
+	ErrFileSeek      = errors.New("I/O error while seeking file")
+	ErrFileRead      = errors.New("I/O error while reading file")
+	ErrFileReadShort = errors.New("Read too short")
+	ErrFileWrite     = errors.New("I/O error while writing file")
 )
 
 type FileMgr struct {
-	fileName  string
-	basePath  string
+	baseDir   string
 	blockSize int64
+	isNew     bool
+	// mu        sync.Mutex
+	// openFiles map[string]*os.File
 }
 
-func NewFileMgr(fileName string) *FileMgr {
+func NewFileMgr() *FileMgr {
 	diskDir := os.Getenv("DISK")
-	return &FileMgr{
-		fileName:  fileName,
-		basePath:  diskDir,
-		blockSize: PageSize,
+	fm := &FileMgr{}
+	fm.baseDir = diskDir
+	fm.blockSize = PageSize
+	_, err := os.Stat(fm.baseDir)
+	fm.isNew = err != nil
+	if fm.isNew {
+		os.Mkdir(fm.baseDir, 0777)
 	}
+	return fm
 }
 
 func (fm *FileMgr) Clean() {
-	diskDir := os.Getenv("DISK")
-	os.Remove(diskDir + fm.fileName)
+	err := filepath.Walk(fm.baseDir, func(p string, info os.FileInfo, err error) error {
+		if ok, _ := filepath.Match("temp*", info.Name()); ok {
+			os.Remove(info.Name())
+		}
+		return nil
+	})
+
+	if err != nil {
+		panic(errors.New("filepath.Walk failed during NewFileManager"))
+	}
 }
 
 func (fm *FileMgr) Write(blk BlockId, bytes []byte) {
-	file, err := os.OpenFile(fm.basePath+fm.fileName, os.O_WRONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile(fm.baseDir+blk.fileName, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -44,7 +67,7 @@ func (fm *FileMgr) Write(blk BlockId, bytes []byte) {
 }
 
 func (fm *FileMgr) Read(blk BlockId) (int, []byte) {
-	file, err := os.Open(fm.basePath + fm.fileName)
+	file, err := os.Open(fm.baseDir + blk.fileName)
 	if err != nil {
 		panic(err)
 	}
@@ -66,12 +89,12 @@ func (fm *FileMgr) Read(blk BlockId) (int, []byte) {
 	return n, buf
 }
 
-func (fm *FileMgr) ReadLastBlock() (int, int, []byte) {
+func (fm *FileMgr) ReadLastBlock(fileName string) (int, int, []byte) {
 	curBlkId := 0
 	lastBuf := make([]byte, PageSize)
 	lastN := 0
 	for {
-		n, buf := fm.Read(NewBlockId(uint32(curBlkId)))
+		n, buf := fm.Read(NewBlockId(uint32(curBlkId), fileName))
 		if n == 0 {
 			if curBlkId == 0 {
 				panic(errors.New("cannot get last block"))

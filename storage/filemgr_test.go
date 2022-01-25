@@ -7,6 +7,8 @@ import (
 	"github.com/tychyDB/storage"
 )
 
+const testFName = "testFile"
+
 func min(a int, b int) int {
 	if a <= b {
 		return a
@@ -18,18 +20,18 @@ func TestFileMgr(t *testing.T) {
 	byteLen := 42000
 	token := make([]byte, byteLen)
 	rand.Read(token)
-	fm := storage.NewFileMgr("testFileMgr")
+	fm := storage.NewFileMgr()
 	defer fm.Clean()
 	numBlocks := (byteLen + storage.PageSize) / storage.PageSize
 	for curBlkId := 0; curBlkId < numBlocks; curBlkId++ {
-		curBlk := storage.NewBlockId(uint32(curBlkId))
+		curBlk := storage.NewBlockId(uint32(curBlkId), testFName)
 		lower := curBlkId * storage.PageSize
 		upper := min(byteLen, (curBlkId+1)*storage.PageSize)
 		fm.Write(curBlk, token[lower:upper])
 	}
 
 	for curBlkId := 0; curBlkId < numBlocks; curBlkId++ {
-		curBlk := storage.NewBlockId(uint32(curBlkId))
+		curBlk := storage.NewBlockId(uint32(curBlkId), testFName)
 		lower := curBlkId * storage.PageSize
 		upper := min(byteLen, (curBlkId+1)*storage.PageSize)
 		buf := token[lower:upper]
@@ -51,11 +53,11 @@ func TestFileMgrGetLastBlock(t *testing.T) {
 	byteLen := 42000
 	token := make([]byte, byteLen)
 	rand.Read(token)
-	fm := storage.NewFileMgr("testFileMgr")
+	fm := storage.NewFileMgr()
 	defer fm.Clean()
 	numBlocks := (byteLen + storage.PageSize) / storage.PageSize
 	for curBlkId := 0; curBlkId < numBlocks; curBlkId++ {
-		curBlk := storage.NewBlockId(uint32(curBlkId))
+		curBlk := storage.NewBlockId(uint32(curBlkId), testFName)
 		lower := curBlkId * storage.PageSize
 		upper := min(byteLen, (curBlkId+1)*storage.PageSize)
 		fm.Write(curBlk, token[lower:upper])
@@ -66,7 +68,7 @@ func TestFileMgrGetLastBlock(t *testing.T) {
 	upper := min(byteLen, (curBlkId+1)*storage.PageSize)
 	buf := token[lower:upper]
 
-	blkId, n, lastBytes := fm.ReadLastBlock()
+	blkId, n, lastBytes := fm.ReadLastBlock(testFName)
 	if blkId != numBlocks-1 {
 		t.Error("block id mismatch")
 	}

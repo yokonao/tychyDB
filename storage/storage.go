@@ -10,6 +10,8 @@ import (
 	"github.com/tychyDB/algorithm"
 )
 
+const StorageFile = "storage"
+
 func Reset() {
 	UniqueBlockId = 0
 }
@@ -26,7 +28,7 @@ func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
 	st := Storage{}
 	// テーブルのメタ情報を置くためのページ
 
-	metaBlk := newUniqueBlockId()
+	metaBlk := newUniqueBlockId(StorageFile)
 	st.metaPage = newMetaPage(metaBlk)
 	if metaBlk.BlockNum != 0 {
 		panic(errors.New("place a meta page at the top of the file"))
@@ -37,7 +39,7 @@ func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
 	st.ptb = ptb
 	// rootノード
 	root := newPage(false)
-	st.rootBlk = newUniqueBlockId()
+	st.rootBlk = newUniqueBlockId(StorageFile)
 	ptb.set(st.rootBlk, root)
 	st.metaPage.rootBlk = st.rootBlk
 	return st
@@ -45,7 +47,7 @@ func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
 
 func NewStorageFromFile(fm *FileMgr, ptb *PageTable) Storage {
 	st := Storage{}
-	blk := newUniqueBlockId()
+	blk := newUniqueBlockId(StorageFile)
 	if blk.BlockNum != 0 {
 		panic(errors.New("expect 0"))
 	}
@@ -60,6 +62,7 @@ func NewStorageFromFile(fm *FileMgr, ptb *PageTable) Storage {
 
 func (st *Storage) Flush() {
 	st.ptb.Flush()
+	fmt.Println("filename -------- ", st.metaPage.metaBlk.fileName)
 	st.fm.Write(st.metaPage.metaBlk, st.metaPage.toBytes())
 }
 
@@ -79,7 +82,7 @@ func (st *Storage) addRecord(rec Record) {
 	rootPage := st.ptb.pin(st.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		pg := newPage(true)
-		blk := newUniqueBlockId()
+		blk := newUniqueBlockId(StorageFile)
 		st.ptb.set(blk, pg)
 		rootPage.cells = append(rootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: blk.BlockNum})
 		rootPage.header.rightmostPtr = 0
@@ -92,7 +95,7 @@ func (st *Storage) addRecord(rec Record) {
 		splitted, splitKey, leftPageIndex := rootPage.addRecordRec(st.ptb, rec)
 		if splitted {
 			newRootPage := newPage(false)
-			blk := newUniqueBlockId()
+			blk := newUniqueBlockId(StorageFile)
 			st.ptb.set(blk, newRootPage)
 			st.ptb.pin(blk)
 			newRootPage.header.rightmostPtr = 0
@@ -172,7 +175,7 @@ func (st *Storage) SearchPrKey(prKey int32) BlockId {
 		} else {
 			childBlkId = curPage.cells[curPage.ptrs[idx]].(KeyCell).pageIndex
 		}
-		childBlk := NewBlockId(childBlkId)
+		childBlk := NewBlockId(childBlkId, StorageFile)
 		childPage := st.ptb.pin(childBlk)
 		st.ptb.unpin(curBlk)
 		curBlk = childBlk
@@ -244,7 +247,7 @@ func (st *Storage) selectInt(col Column) (res []interface{}, err error) {
 	pageQueue.Push(int(st.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := st.ptb.read(NewBlockId(curPageIndex))
+		curPage := st.ptb.read(NewBlockId(curPageIndex, StorageFile))
 		if curPage.header.isLeaf {
 			for _, ptr := range curPage.ptrs {
 				rec := curPage.cells[ptr].(KeyValueCell).rec
@@ -270,7 +273,7 @@ func (st *Storage) selectChar(col Column) (res []interface{}, err error) {
 	pageQueue.Push(int(st.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := st.ptb.read(NewBlockId(curPageIndex))
+		curPage := st.ptb.read(NewBlockId(curPageIndex, StorageFile))
 		if curPage.header.isLeaf {
 
 			for _, ptr := range curPage.ptrs {
@@ -340,7 +343,7 @@ func (st *Storage) Print() {
 	pageQueue.Push(int(st.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := st.ptb.read(NewBlockId(curPageIndex))
+		curPage := st.ptb.read(NewBlockId(curPageIndex, StorageFile))
 		fmt.Printf("Page Index is %d\n", curPageIndex)
 		curPage.info()
 		if !curPage.header.isLeaf {

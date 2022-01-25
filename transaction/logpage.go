@@ -21,7 +21,7 @@ type LogPage struct {
 
 func newLogPage(pageNum uint32) *LogPage {
 	logPage := &LogPage{}
-	logPage.blk = storage.NewBlockId(pageNum)
+	logPage.blk = storage.NewBlockId(pageNum, LogFile)
 	logPage.isFull = false
 	logPage.numLogs = 0
 	return logPage
@@ -30,7 +30,7 @@ func newLogPage(pageNum uint32) *LogPage {
 func NewLogPageFromBytes(bytes []byte) *LogPage {
 	iter := util.NewIterStruct(0, bytes)
 	blockNum := iter.NextUInt32()
-	blk := storage.NewBlockId(blockNum)
+	blk := storage.NewBlockId(blockNum, LogFile)
 	pg := &LogPage{}
 	pg.blk = blk
 	pg.isFull = iter.NextBool()

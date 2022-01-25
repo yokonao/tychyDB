@@ -149,7 +149,7 @@ func (pg *Page) addRecordRec(ptb *PageTable, rec Record) (splitted bool, splitKe
 			cellIndex := pg.ptrs[insert_idx]
 			pageIndex = pg.cells[cellIndex].(KeyCell).pageIndex
 		}
-		blk := NewBlockId(pageIndex)
+		blk := NewBlockId(pageIndex, StorageFile)
 
 		splitted, splitKey, leftPageIndex := ptb.pin(blk).addRecordRec(ptb, rec)
 		if splitted {
@@ -161,7 +161,7 @@ func (pg *Page) addRecordRec(ptb *PageTable, rec Record) (splitted bool, splitKe
 			pg.ptrs = insertInt(int(insert_idx), uint32(len(pg.cells)), pg.ptrs)
 			pg.cells = append(pg.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
 			pg.header.numOfPtr++
-			ptb.unpin(NewBlockId(leftPageIndex))
+			ptb.unpin(NewBlockId(leftPageIndex, StorageFile))
 		}
 		ptb.unpin(blk)
 	}
@@ -175,7 +175,7 @@ func (pg *Page) addRecordRec(ptb *PageTable, rec Record) (splitted bool, splitKe
 			splitKey = pg.cells[pg.ptrs[splitIndex-1]].getKey()
 		}
 		leftPage := newPage(pg.header.isLeaf)
-		blk := newUniqueBlockId()
+		blk := newUniqueBlockId(StorageFile)
 		ptb.set(blk, leftPage)
 		ptb.pin(blk)
 		leftPageIndex = blk.BlockNum

@@ -18,7 +18,7 @@ func createStorage(t *testing.T) {
 	cleanDisk(t)
 	storage.Reset()
 
-	fm := storage.NewFileMgr("testfile")
+	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorage(fm, ptb)
@@ -40,9 +40,9 @@ func TestTxn(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.Reset()
-	logfm := storage.NewFileMgr("logfile")
+	logfm := storage.NewFileMgr()
 
-	fm := storage.NewFileMgr("testfile")
+	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	tb := storage.NewStorageFromFile(fm, ptb)
@@ -61,9 +61,9 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.Reset()
-	logfm := storage.NewFileMgr("logfile")
+	logfm := storage.NewFileMgr()
 
-	fm := storage.NewFileMgr("testfile")
+	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
@@ -98,8 +98,8 @@ func TestLogLSN(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.Reset()
-	logfm := storage.NewFileMgr("logfile")
-	fm := storage.NewFileMgr("testfile")
+	logfm := storage.NewFileMgr()
+	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
@@ -113,18 +113,18 @@ func TestLogLSN(t *testing.T) {
 
 	updateInfo = st.Update(2, "fuga", 3335)
 
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)); val != 2 {
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 2 {
 		t.Errorf("invalid pageLSN expect %d got %d", 2, val)
 	}
 	rm.Update(txn, updateInfo)
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)); val != 3 {
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 3 {
 		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
 	}
 
 	st.Flush()
 	storage.Reset()
 	st = storage.NewStorageFromFile(fm, ptb)
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)); val != 3 {
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 3 {
 		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
 	}
 	rm.Commit(txn)
@@ -135,8 +135,8 @@ func TestLogLSNCC(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.Reset()
-	logfm := storage.NewFileMgr("logfile")
-	fm := storage.NewFileMgr("testfile")
+	logfm := storage.NewFileMgr()
+	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
@@ -153,11 +153,11 @@ func TestLogLSNCC(t *testing.T) {
 	rm.Begin(txnB)
 	updateInfo = st.Update(2, "fuga", 3335)
 
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)); val != 2 {
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 2 {
 		t.Errorf("invalid pageLSN expect %d got %d", 2, val)
 	}
 	rm.Update(txnA, updateInfo)
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)); val != 4 {
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 4 {
 		t.Errorf("invalid pageLSN expect %d got %d", 4, val)
 	}
 	rm.Abort(txnB)
@@ -166,7 +166,7 @@ func TestLogLSNCC(t *testing.T) {
 	st.Flush()
 	storage.Reset()
 	st = storage.NewStorageFromFile(fm, ptb)
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx)); val != 4 {
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 4 {
 		t.Errorf("invalid pageLSN expect %d got %d", 4, val)
 	}
 	lm.Print()
@@ -176,8 +176,8 @@ func TestLogIter(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.Reset()
-	logfm := storage.NewFileMgr("logfile")
-	fm := storage.NewFileMgr("testfile")
+	logfm := storage.NewFileMgr()
+	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	lm := transaction.NewLogMgr(*logfm)
