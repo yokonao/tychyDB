@@ -29,7 +29,7 @@ func (buff *Buffer) page() *Page {
 
 func (buff *Buffer) Print() {
 	fmt.Printf("Buffer {")
-	fmt.Printf("BlockID %d, ", buff.blk)
+	fmt.Printf("BlockID %d, ", buff.blk.BlockNum)
 	if buff.pin {
 		fmt.Print("pin, ")
 	} else {

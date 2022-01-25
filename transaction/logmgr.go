@@ -6,6 +6,8 @@ import (
 	"github.com/tychyDB/storage"
 )
 
+const LogFile = "log"
+
 type LogMgr struct {
 	UniqueLSN     uint32
 	UniquePageNum uint32
@@ -27,7 +29,7 @@ func NewLogMgr(fm storage.FileMgr) *LogMgr {
 func NewLogMgrFromFile(fm storage.FileMgr) *LogMgr {
 	logMgr := LogMgr{}
 	logMgr.fm = fm
-	blk, n, buf := fm.ReadLastBlock()
+	blk, n, buf := fm.ReadLastBlock(LogFile)
 	if n == 0 {
 		panic(errors.New("page is empty"))
 	}

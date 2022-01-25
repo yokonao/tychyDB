@@ -19,7 +19,8 @@ func newMetaPageFromBytes(bytes []byte) *MetaPage {
 	iter := util.NewIterStruct(0, bytes)
 	rootBlockId := iter.NextUInt32()
 	UniqueBlockId = iter.NextUInt32()
-	pg.rootBlk = NewBlockId(rootBlockId)
+	pg.metaBlk = NewBlockId(0, StorageFile)
+	pg.rootBlk = NewBlockId(rootBlockId, StorageFile)
 
 	lenCols := iter.NextUInt32()
 	for i := 0; i < int(lenCols); i++ {

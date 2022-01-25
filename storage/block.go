@@ -7,18 +7,21 @@ func init() {
 }
 
 type BlockId struct {
+	fileName string
 	BlockNum uint32
 }
 
-func NewBlockId(blockNum uint32) BlockId {
+func NewBlockId(blockNum uint32, fileName string) BlockId {
 	blk := BlockId{}
 	blk.BlockNum = blockNum
+	blk.fileName = fileName
 	return blk
 }
 
-func newUniqueBlockId() BlockId {
+func newUniqueBlockId(fileName string) BlockId {
 	blk := BlockId{}
 	blk.BlockNum = UniqueBlockId
+	blk.fileName = fileName
 	UniqueBlockId++
 	return blk
 

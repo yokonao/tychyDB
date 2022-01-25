@@ -9,7 +9,7 @@ import (
 
 func createStorage(t *testing.T) {
 	storage.Reset()
-	fm := storage.NewFileMgr("testfile")
+	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 
@@ -39,7 +39,7 @@ func TestDebug(t *testing.T) {
 
 func TestStorageEasy(t *testing.T) {
 	storage.Reset()
-	fm := storage.NewFileMgr("testfile")
+	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorage(fm, ptb)
@@ -56,7 +56,7 @@ func TestStorageEasy(t *testing.T) {
 func TestStorage(t *testing.T) {
 	storage.Reset()
 
-	fm := storage.NewFileMgr("testfile")
+	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorage(fm, ptb)
@@ -109,7 +109,7 @@ func TestStorage(t *testing.T) {
 func TestStorageChar(t *testing.T) {
 	storage.Reset()
 
-	fm := storage.NewFileMgr("testfile")
+	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	countryTable := storage.NewStorage(fm, ptb)
@@ -160,7 +160,7 @@ func TestStorageRestore(t *testing.T) {
 	createStorage(t)
 	storage.Reset()
 
-	fm := storage.NewFileMgr("testfile")
+	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
@@ -204,7 +204,7 @@ func TestUpdate(t *testing.T) {
 	createStorage(t)
 	storage.Reset()
 
-	fm := storage.NewFileMgr("testfile")
+	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb) // hogeがプライマリー
@@ -250,7 +250,7 @@ func TestUpdateIdempotent(t *testing.T) {
 	createStorage(t)
 	storage.Reset()
 
-	fm := storage.NewFileMgr("testfile")
+	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb) // hogeがプライマリー

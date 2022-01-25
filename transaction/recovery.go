@@ -31,5 +31,5 @@ func (rm *RecoveryMgr) Abort(txn *Transaction) {
 func (rm *RecoveryMgr) Update(txn *Transaction, updateInfo storage.UpdateInfo) {
 	log := rm.lm.addLog(txn.txnId, UPDATE)
 	log.addUpdateInfo(updateInfo)
-	rm.ptb.SetPageLSN(storage.NewBlockId(updateInfo.PageIdx), log.lsn)
+	rm.ptb.SetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile), log.lsn)
 }
