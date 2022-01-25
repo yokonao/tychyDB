@@ -250,7 +250,7 @@ func TestUpdateIdempotent(t *testing.T) {
 	createStorage(t)
 	storage.Reset()
 
-	fm := storage.NewFileMgr("testfile")
+	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb) // hogeがプライマリー
