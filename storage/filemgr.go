@@ -3,7 +3,6 @@ package storage
 import (
 	"errors"
 	"os"
-	"path/filepath"
 )
 
 var (
@@ -36,16 +35,7 @@ func NewFileMgr() *FileMgr {
 }
 
 func (fm *FileMgr) Clean() {
-	err := filepath.Walk(fm.baseDir, func(p string, info os.FileInfo, err error) error {
-		if ok, _ := filepath.Match("temp*", info.Name()); ok {
-			os.Remove(info.Name())
-		}
-		return nil
-	})
-
-	if err != nil {
-		panic(errors.New("filepath.Walk failed during NewFileManager"))
-	}
+	os.Remove(fm.baseDir)
 }
 
 func (fm *FileMgr) Write(blk BlockId, bytes []byte) {
