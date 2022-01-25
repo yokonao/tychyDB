@@ -245,3 +245,52 @@ func TestUpdate(t *testing.T) {
 		t.Errorf("expected: 33, actual: %d", res[3][3])
 	}
 }
+
+func TestUpdateIdempotent(t *testing.T) {
+	createStorage(t)
+	storage.Reset()
+
+	fm := storage.NewFileMgr("testfile")
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	st := storage.NewStorageFromFile(fm, ptb) // hogeがプライマリー
+
+	st.Update(2, "fuga", 33)
+	st.Update(2, "fuga", 33)
+	st.Update(10, "fuga", 44)
+	st.Update(10, "fuga", 44)
+	st.Update(10, "piyo", 4)
+	st.Update(10, "piyo", 4)
+
+	res, err := st.Select("hoge", "fuga", "piyo", "fuga")
+	if err != nil {
+		t.Error("failure select")
+	}
+	if res[0][0].(int32) != -345 {
+		t.Errorf("expected: -345, actual: %d", res[0][0])
+	}
+	if res[1][1].(int32) != 89 {
+		t.Errorf("expected: 89, actual: %d", res[1][1])
+	}
+	if res[2][2].(int32) != 0 {
+		t.Errorf("expected: 0, actual: %d", res[2][2])
+	}
+	if res[3][3].(int32) != 33 {
+		t.Errorf("expected: 33, actual: %d", res[3][3])
+	}
+	if res[1][4].(int32) != 44 {
+		t.Errorf("expected: 44, actual: %d", res[3][3])
+	}
+
+	if res[2][4].(int32) != 4 {
+		t.Errorf("expected: 4, actual: %d", res[3][3])
+	}
+	res, err = st.Select("hoge", "fuga", "piyo", "fuga")
+	if err != nil {
+		t.Error("failure select")
+	}
+	st.Update(2, "fuga", 333)
+	if res[3][3].(int32) != 33 {
+		t.Errorf("expected: 33, actual: %d", res[3][3])
+	}
+}
