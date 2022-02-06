@@ -62,17 +62,6 @@ func (st *Storage) Flush() {
 	st.fm.Write(st.metaBlk, st.MetaPage.toBytes())
 }
 
-func (st *Storage) AddColumn(name string, ty Type) {
-	var pos uint32
-	if st.ColumnLength() == 0 {
-		pos = 0
-	} else {
-		last := st.cols[st.ColumnLength()-1]
-		pos = last.pos + last.ty.size
-	}
-	st.cols = append(st.cols, Column{ty: ty, name: name, pos: pos})
-}
-
 func (st *Storage) addRecord(rec Record) {
 	rootPage := st.ptb.pin(st.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
@@ -104,30 +93,15 @@ func (st *Storage) addRecord(rec Record) {
 	}
 }
 
-func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
-	if len(args) != len(cols) {
-		err = errors.New("the count of arguments must be same column's")
-		return
+func (st *Storage) AddColumn(name string, ty Type) {
+	var pos uint32
+	if st.ColumnLength() == 0 {
+		pos = 0
+	} else {
+		last := st.cols[st.ColumnLength()-1]
+		pos = last.pos + last.ty.size
 	}
-	bytes = []byte{}
-	for i, col := range cols {
-		if col.ty.id == integerId {
-			val := uint32(args[i].(int))
-			buf := make([]byte, col.ty.size)
-			binary.BigEndian.PutUint32(buf, val)
-			bytes = append(bytes, buf...)
-		} else if col.ty.id == charId {
-			rd := strings.NewReader(args[i].(string))
-			buf := make([]byte, col.ty.size)
-			rd.Read(buf)
-			bytes = append(bytes, buf...)
-		} else {
-			bytes = nil
-			err = errors.New("the type of a column is not implemented")
-			return
-		}
-	}
-	return
+	st.cols = append(st.cols, Column{ty: ty, name: name, pos: pos})
 }
 
 func (st *Storage) Add(args ...interface{}) error {
@@ -137,46 +111,6 @@ func (st *Storage) Add(args ...interface{}) error {
 	}
 	st.addRecord(Record{size: uint32(len(bytes)), data: bytes})
 	return nil
-}
-
-func (st *Storage) GetPrimaryKey(prVal interface{}) int32 {
-	col, _ := st.GetPrColumn()
-	buf := make([]byte, col.ty.size)
-	if col.ty.id == integerId {
-		val := uint32(prVal.(int))
-		binary.BigEndian.PutUint32(buf, val)
-	} else if col.ty.id == charId {
-		rd := strings.NewReader(prVal.(string))
-		rd.Read(buf)
-	} else {
-		panic(errors.New("the type of a column is not implemented"))
-	}
-	return int32(binary.BigEndian.Uint32(buf[:IntSize]))
-}
-
-func (st *Storage) SearchPrKey(prKey int32) BlockId {
-	rootPage := st.ptb.pin(st.rootBlk)
-	if rootPage.header.numOfPtr == 0 {
-		panic(errors.New("unexpected"))
-	}
-	curBlk := st.rootBlk
-	curPage := rootPage
-	for !curPage.header.isLeaf {
-		idx := curPage.locateLocally(prKey)
-		var childBlkId uint32
-		if idx == curPage.header.numOfPtr {
-			childBlkId = curPage.cells[curPage.header.rightmostPtr].(KeyCell).pageIndex
-		} else {
-			childBlkId = curPage.cells[curPage.ptrs[idx]].(KeyCell).pageIndex
-		}
-		childBlk := NewBlockId(childBlkId, StorageFile)
-		childPage := st.ptb.pin(childBlk)
-		st.ptb.unpin(curBlk)
-		curBlk = childBlk
-		curPage = childPage
-	}
-	st.ptb.unpin(curBlk)
-	return curBlk
 }
 
 func (st *Storage) Update(prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {
@@ -361,4 +295,44 @@ func (st *Storage) GetPrColumn() (Column, error) {
 	}
 	// use index 0 as primary column for now
 	return (st.cols)[0], nil
+}
+
+func (st *Storage) GetPrimaryKey(prVal interface{}) int32 {
+	col, _ := st.GetPrColumn()
+	buf := make([]byte, col.ty.size)
+	if col.ty.id == integerId {
+		val := uint32(prVal.(int))
+		binary.BigEndian.PutUint32(buf, val)
+	} else if col.ty.id == charId {
+		rd := strings.NewReader(prVal.(string))
+		rd.Read(buf)
+	} else {
+		panic(errors.New("the type of a column is not implemented"))
+	}
+	return int32(binary.BigEndian.Uint32(buf[:IntSize]))
+}
+
+func (st *Storage) SearchPrKey(prKey int32) BlockId {
+	rootPage := st.ptb.pin(st.rootBlk)
+	if rootPage.header.numOfPtr == 0 {
+		panic(errors.New("unexpected"))
+	}
+	curBlk := st.rootBlk
+	curPage := rootPage
+	for !curPage.header.isLeaf {
+		idx := curPage.locateLocally(prKey)
+		var childBlkId uint32
+		if idx == curPage.header.numOfPtr {
+			childBlkId = curPage.cells[curPage.header.rightmostPtr].(KeyCell).pageIndex
+		} else {
+			childBlkId = curPage.cells[curPage.ptrs[idx]].(KeyCell).pageIndex
+		}
+		childBlk := NewBlockId(childBlkId, StorageFile)
+		childPage := st.ptb.pin(childBlk)
+		st.ptb.unpin(curBlk)
+		curBlk = childBlk
+		curPage = childPage
+	}
+	st.ptb.unpin(curBlk)
+	return curBlk
 }
