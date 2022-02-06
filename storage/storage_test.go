@@ -8,7 +8,7 @@ import (
 )
 
 func createStorage(t *testing.T) {
-	storage.Reset()
+	storage.ResetBlockId()
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
@@ -33,12 +33,37 @@ func createStorage(t *testing.T) {
 	}
 }
 
-func TestDebug(t *testing.T) {
-	createStorage(t)
+func createStorageWithChar(t *testing.T) {
+	storage.ResetBlockId()
+	fm := storage.NewFileMgr()
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+
+	st := storage.NewStorage(fm, ptb)
+	st.AddColumn("hoge", storage.IntergerType)
+	st.AddColumn("fuga", storage.IntergerType)
+	st.AddColumn("hogefuga", storage.CharType(10))
+	st.AddColumn("piyo", storage.IntergerType)
+	st.Flush()
+
+	st.Add(2, -13, "pika", 89)
+	st.Add(10000, 4, "pika", 44)
+	st.Add(500, 5, "pokemon", 90)
+	st.Add(10, 45, "luckey", -999)
+	st.Add(-345, 77, "767", 43)
+	st.Add(-100, 89, "r", 111)
+	st.Add(0, 0, "", 0)
+	st.Add(80000, 10, "bigbigbigA", 0)
+	st.Flush()
+
+	_, err := st.Select("hoge", "fuga", "piyo", "hogefuga", "fuga")
+	if err != nil {
+		t.Error("failure select")
+	}
 }
 
 func TestStorageEasy(t *testing.T) {
-	storage.Reset()
+	storage.ResetBlockId()
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
@@ -52,9 +77,10 @@ func TestStorageEasy(t *testing.T) {
 	st.Add(500, 5, 90)
 	st.Add(10000, 4, 44)
 	st.Add(-345, 77, 43)
+	fm.Clean()
 }
 func TestStorage(t *testing.T) {
-	storage.Reset()
+	storage.ResetBlockId()
 
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
@@ -104,10 +130,11 @@ func TestStorage(t *testing.T) {
 	if res[3][3].(int32) != -13 {
 		t.Errorf("expected: -13, actual: %d", res[3][3])
 	}
+	fm.Clean()
 }
 
 func TestStorageChar(t *testing.T) {
-	storage.Reset()
+	storage.ResetBlockId()
 
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
@@ -154,11 +181,27 @@ func TestStorageChar(t *testing.T) {
 	if !strings.HasPrefix(res[1][3].(string), "Nigeria") {
 		t.Errorf("expected: Nigeria, actual: %s\n", res[1][3].(string))
 	}
+	fm.Clean()
+}
+
+func TestStorageMixed(t *testing.T) {
+	createStorageWithChar(t)
+	storage.ResetBlockId()
+
+	fm := storage.NewFileMgr()
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	st := storage.NewStorageFromFile(fm, ptb)
+	_, err := st.Select("hoge", "fuga", "piyo", "hogefuga", "fuga")
+	if err != nil {
+		t.Error("failure select")
+	}
+	fm.Clean()
 }
 
 func TestStorageRestore(t *testing.T) {
 	createStorage(t)
-	storage.Reset()
+	storage.ResetBlockId()
 
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
@@ -198,11 +241,12 @@ func TestStorageRestore(t *testing.T) {
 	if res[3][3].(int32) != -13 {
 		t.Errorf("expected: -13, actual: %d", res[3][3])
 	}
+	fm.Clean()
 }
 
 func TestUpdate(t *testing.T) {
 	createStorage(t)
-	storage.Reset()
+	storage.ResetBlockId()
 
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
@@ -244,11 +288,12 @@ func TestUpdate(t *testing.T) {
 	if res[3][3].(int32) != 33 {
 		t.Errorf("expected: 33, actual: %d", res[3][3])
 	}
+	fm.Clean()
 }
 
 func TestUpdateIdempotent(t *testing.T) {
 	createStorage(t)
-	storage.Reset()
+	storage.ResetBlockId()
 
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
@@ -293,4 +338,5 @@ func TestUpdateIdempotent(t *testing.T) {
 	if res[3][3].(int32) != 33 {
 		t.Errorf("expected: 33, actual: %d", res[3][3])
 	}
+	fm.Clean()
 }
