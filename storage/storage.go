@@ -42,6 +42,7 @@ func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
 	st.rootBlk = newUniqueBlockId(StorageFile)
 	ptb.set(st.rootBlk, root)
 	st.metaPage.rootBlk = st.rootBlk
+	st.cols = []Column{}
 	return st
 }
 
@@ -68,10 +69,10 @@ func (st *Storage) Flush() {
 
 func (st *Storage) AddColumn(name string, ty Type) {
 	var pos uint32
-	if len(st.cols) == 0 {
+	if st.ColumnLength() == 0 {
 		pos = 0
 	} else {
-		last := st.cols[len(st.cols)-1]
+		last := st.cols[st.ColumnLength()-1]
 		pos = last.pos + last.ty.size
 	}
 	st.cols = append(st.cols, Column{ty: ty, name: name, pos: pos})
@@ -146,7 +147,7 @@ func (st *Storage) Add(args ...interface{}) error {
 }
 
 func (st *Storage) GetPrimaryKey(prVal interface{}) int32 {
-	col := st.cols[0] // use index 0 as primary column for now
+	col, _ := st.GetPrColumn()
 	buf := make([]byte, col.ty.size)
 	if col.ty.id == integerId {
 		val := uint32(prVal.(int))
@@ -186,7 +187,7 @@ func (st *Storage) SearchPrKey(prKey int32) BlockId {
 }
 
 func (st *Storage) Update(prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {
-	col := st.cols[0] // use index 0 as primary column for now
+	col, _ := st.GetPrColumn()
 	prKey := st.GetPrimaryKey(prVal)
 	curBlk := st.SearchPrKey(prKey)
 	curPage := st.ptb.pin(curBlk)
@@ -267,7 +268,7 @@ func (st *Storage) selectInt(col Column) (res []interface{}, err error) {
 func (st *Storage) selectChar(col Column) (res []interface{}, err error) {
 
 	if col.ty.id != charId {
-		return nil, errors.New("you must specify int type column")
+		return nil, errors.New("you must specify char type column")
 	}
 	pageQueue := algorithm.NewQueue(64)
 	pageQueue.Push(int(st.rootBlk.BlockNum))
@@ -355,4 +356,16 @@ func (st *Storage) Print() {
 
 	}
 
+}
+
+func (st *Storage) ColumnLength() int {
+	return len(st.cols)
+}
+
+func (st *Storage) GetPrColumn() (Column, error) {
+	if st.ColumnLength() == 0 {
+		return Column{}, errors.New("out of range")
+	}
+	// use index 0 as primary column for now
+	return (st.cols)[0], nil
 }
