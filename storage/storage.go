@@ -17,11 +17,9 @@ func Reset() {
 }
 
 type Storage struct {
-	fm       *FileMgr
-	ptb      *PageTable
-	cols     []Column
-	rootBlk  BlockId
-	metaPage *MetaPage
+	fm  *FileMgr
+	ptb *PageTable
+	MetaPage
 }
 
 func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
@@ -29,19 +27,18 @@ func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
 	// テーブルのメタ情報を置くためのページ
 
 	metaBlk := newUniqueBlockId(StorageFile)
-	st.metaPage = newMetaPage(metaBlk)
+	st.metaBlk = metaBlk
 	if metaBlk.BlockNum != 0 {
 		panic(errors.New("place a meta page at the top of the file"))
 	}
 	st.fm = fm
-	st.fm.Write(metaBlk, st.metaPage.toBytes())
+	st.fm.Write(metaBlk, st.MetaPage.toBytes())
 
 	st.ptb = ptb
 	// rootノード
 	root := newPage(false)
 	st.rootBlk = newUniqueBlockId(StorageFile)
 	ptb.set(st.rootBlk, root)
-	st.metaPage.rootBlk = st.rootBlk
 	st.cols = []Column{}
 	return st
 }
@@ -55,16 +52,14 @@ func NewStorageFromFile(fm *FileMgr, ptb *PageTable) Storage {
 	st.fm = fm
 	st.ptb = ptb
 	_, bytes := fm.Read(blk)
-	st.metaPage = newMetaPageFromBytes(bytes)
-	st.rootBlk = st.metaPage.rootBlk
-	st.cols = st.metaPage.cols
+	st.MetaPage = newMetaPageFromBytes(bytes)
 	return st
 }
 
 func (st *Storage) Flush() {
 	st.ptb.Flush()
-	fmt.Println("filename -------- ", st.metaPage.metaBlk.fileName)
-	st.fm.Write(st.metaPage.metaBlk, st.metaPage.toBytes())
+	fmt.Println("filename -------- ", st.metaBlk.fileName)
+	st.fm.Write(st.metaBlk, st.MetaPage.toBytes())
 }
 
 func (st *Storage) AddColumn(name string, ty Type) {
@@ -76,7 +71,6 @@ func (st *Storage) AddColumn(name string, ty Type) {
 		pos = last.pos + last.ty.size
 	}
 	st.cols = append(st.cols, Column{ty: ty, name: name, pos: pos})
-	st.metaPage.cols = append(st.cols, Column{ty: ty, name: name, pos: pos})
 }
 
 func (st *Storage) addRecord(rec Record) {
@@ -105,7 +99,6 @@ func (st *Storage) addRecord(rec Record) {
 			newRootPage.cells = append(newRootPage.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
 			newRootPage.header.numOfPtr += 2
 			st.rootBlk = blk
-			st.metaPage.rootBlk = blk
 		}
 		st.ptb.unpin(st.rootBlk)
 	}
