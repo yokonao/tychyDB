@@ -16,7 +16,7 @@ func cleanDisk(t *testing.T) {
 
 func createStorage(t *testing.T) {
 	cleanDisk(t)
-	storage.Reset()
+	storage.ResetBlockId()
 
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
@@ -39,7 +39,7 @@ func createStorage(t *testing.T) {
 func TestTxn(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
-	storage.Reset()
+	storage.ResetBlockId()
 	logfm := storage.NewFileMgr()
 
 	fm := storage.NewFileMgr()
@@ -60,7 +60,7 @@ func TestTxn(t *testing.T) {
 func TestLogSerializeDeSerialize(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
-	storage.Reset()
+	storage.ResetBlockId()
 	logfm := storage.NewFileMgr()
 
 	fm := storage.NewFileMgr()
@@ -97,7 +97,7 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 func TestLogLSN(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
-	storage.Reset()
+	storage.ResetBlockId()
 	logfm := storage.NewFileMgr()
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
@@ -122,7 +122,7 @@ func TestLogLSN(t *testing.T) {
 	}
 
 	st.Flush()
-	storage.Reset()
+	storage.ResetBlockId()
 	st = storage.NewStorageFromFile(fm, ptb)
 	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 3 {
 		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
@@ -134,7 +134,7 @@ func TestLogLSN(t *testing.T) {
 func TestLogLSNCC(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
-	storage.Reset()
+	storage.ResetBlockId()
 	logfm := storage.NewFileMgr()
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
@@ -164,7 +164,7 @@ func TestLogLSNCC(t *testing.T) {
 	rm.Commit(txnA)
 
 	st.Flush()
-	storage.Reset()
+	storage.ResetBlockId()
 	st = storage.NewStorageFromFile(fm, ptb)
 	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 4 {
 		t.Errorf("invalid pageLSN expect %d got %d", 4, val)
@@ -175,7 +175,7 @@ func TestLogLSNCC(t *testing.T) {
 func TestLogIter(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
-	storage.Reset()
+	storage.ResetBlockId()
 	logfm := storage.NewFileMgr()
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)

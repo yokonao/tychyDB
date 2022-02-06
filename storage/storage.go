@@ -12,7 +12,7 @@ import (
 
 const StorageFile = "storage"
 
-func Reset() {
+func ResetBlockId() {
 	UniqueBlockId = 0
 }
 
