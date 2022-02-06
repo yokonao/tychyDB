@@ -17,11 +17,9 @@ func Reset() {
 }
 
 type Storage struct {
-	fm       *FileMgr
-	ptb      *PageTable
-	cols     []Column
-	rootBlk  BlockId
-	metaPage *MetaPage
+	fm  *FileMgr
+	ptb *PageTable
+	MetaPage
 }
 
 func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
@@ -29,19 +27,19 @@ func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
 	// テーブルのメタ情報を置くためのページ
 
 	metaBlk := newUniqueBlockId(StorageFile)
-	st.metaPage = newMetaPage(metaBlk)
+	st.metaBlk = metaBlk
 	if metaBlk.BlockNum != 0 {
 		panic(errors.New("place a meta page at the top of the file"))
 	}
 	st.fm = fm
-	st.fm.Write(metaBlk, st.metaPage.toBytes())
+	st.fm.Write(metaBlk, st.MetaPage.toBytes())
 
 	st.ptb = ptb
 	// rootノード
 	root := newPage(false)
 	st.rootBlk = newUniqueBlockId(StorageFile)
 	ptb.set(st.rootBlk, root)
-	st.metaPage.rootBlk = st.rootBlk
+	st.cols = []Column{}
 	return st
 }
 
@@ -54,28 +52,25 @@ func NewStorageFromFile(fm *FileMgr, ptb *PageTable) Storage {
 	st.fm = fm
 	st.ptb = ptb
 	_, bytes := fm.Read(blk)
-	st.metaPage = newMetaPageFromBytes(bytes)
-	st.rootBlk = st.metaPage.rootBlk
-	st.cols = st.metaPage.cols
+	st.MetaPage = newMetaPageFromBytes(bytes)
 	return st
 }
 
 func (st *Storage) Flush() {
 	st.ptb.Flush()
-	fmt.Println("filename -------- ", st.metaPage.metaBlk.fileName)
-	st.fm.Write(st.metaPage.metaBlk, st.metaPage.toBytes())
+	fmt.Println("filename -------- ", st.metaBlk.fileName)
+	st.fm.Write(st.metaBlk, st.MetaPage.toBytes())
 }
 
 func (st *Storage) AddColumn(name string, ty Type) {
 	var pos uint32
-	if len(st.cols) == 0 {
+	if st.ColumnLength() == 0 {
 		pos = 0
 	} else {
-		last := st.cols[len(st.cols)-1]
+		last := st.cols[st.ColumnLength()-1]
 		pos = last.pos + last.ty.size
 	}
 	st.cols = append(st.cols, Column{ty: ty, name: name, pos: pos})
-	st.metaPage.cols = append(st.cols, Column{ty: ty, name: name, pos: pos})
 }
 
 func (st *Storage) addRecord(rec Record) {
@@ -104,7 +99,6 @@ func (st *Storage) addRecord(rec Record) {
 			newRootPage.cells = append(newRootPage.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
 			newRootPage.header.numOfPtr += 2
 			st.rootBlk = blk
-			st.metaPage.rootBlk = blk
 		}
 		st.ptb.unpin(st.rootBlk)
 	}
@@ -146,7 +140,7 @@ func (st *Storage) Add(args ...interface{}) error {
 }
 
 func (st *Storage) GetPrimaryKey(prVal interface{}) int32 {
-	col := st.cols[0] // use index 0 as primary column for now
+	col, _ := st.GetPrColumn()
 	buf := make([]byte, col.ty.size)
 	if col.ty.id == integerId {
 		val := uint32(prVal.(int))
@@ -186,7 +180,7 @@ func (st *Storage) SearchPrKey(prKey int32) BlockId {
 }
 
 func (st *Storage) Update(prVal interface{}, targetColName string, replaceTo interface{}) UpdateInfo {
-	col := st.cols[0] // use index 0 as primary column for now
+	col, _ := st.GetPrColumn()
 	prKey := st.GetPrimaryKey(prVal)
 	curBlk := st.SearchPrKey(prKey)
 	curPage := st.ptb.pin(curBlk)
@@ -267,7 +261,7 @@ func (st *Storage) selectInt(col Column) (res []interface{}, err error) {
 func (st *Storage) selectChar(col Column) (res []interface{}, err error) {
 
 	if col.ty.id != charId {
-		return nil, errors.New("you must specify int type column")
+		return nil, errors.New("you must specify char type column")
 	}
 	pageQueue := algorithm.NewQueue(64)
 	pageQueue.Push(int(st.rootBlk.BlockNum))
@@ -355,4 +349,16 @@ func (st *Storage) Print() {
 
 	}
 
+}
+
+func (st *Storage) ColumnLength() int {
+	return len(st.cols)
+}
+
+func (st *Storage) GetPrColumn() (Column, error) {
+	if st.ColumnLength() == 0 {
+		return Column{}, errors.New("out of range")
+	}
+	// use index 0 as primary column for now
+	return (st.cols)[0], nil
 }
