@@ -2,7 +2,6 @@ package storage
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/tychyDB/util"
 )
@@ -18,14 +17,12 @@ func (c Column) String() string {
 }
 
 func (c Column) toBytes() []byte {
-	gen := util.NewGenStruct(0, 3*IntSize+c.ty.size)
+	nameSize := len(c.name)
+	gen := util.NewGenStruct(0, 4*IntSize+uint32(nameSize))
 	gen.PutUInt32(uint32(c.ty.id))
 	gen.PutUInt32(c.ty.size)
 	gen.PutUInt32(c.pos)
-	buf := make([]byte, c.ty.size)
-	rd := strings.NewReader(c.name)
-	rd.Read(buf)
-	gen.PutBytes(c.ty.size, buf)
+	gen.PutStringWithSize(c.name) // this uses 4 + len(c.name)
 	return gen.DumpBytes()
 }
 
@@ -35,6 +32,6 @@ func newColumnfromBytes(bytes []byte) Column {
 	c.ty.id = TypeId(iter.NextUInt32())
 	c.ty.size = iter.NextUInt32()
 	c.pos = iter.NextUInt32()
-	c.name = string(iter.NextBytes(c.ty.size))
+	c.name = iter.NextStringWithSize()
 	return c
 }

@@ -52,3 +52,15 @@ func (is *IterStruct) NextBytes(n uint32) []byte {
 	is.cur += n
 	return res
 }
+
+func (is *IterStruct) NextUint32WithSize() uint32 {
+	if size := is.NextUInt32(); size != 4 {
+		panic(errors.New("expect size 4"))
+	}
+	return is.NextUInt32()
+}
+
+func (is *IterStruct) NextStringWithSize() string {
+	size := is.NextUInt32()
+	return string(is.NextBytes(size))
+}

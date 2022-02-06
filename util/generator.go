@@ -3,6 +3,7 @@ package util
 import (
 	"encoding/binary"
 	"errors"
+	"strings"
 )
 
 type GenStruct struct {
@@ -50,4 +51,19 @@ func (gs *GenStruct) PutBytes(n uint32, bytes []byte) {
 	}
 	copy(gs.bytes[gs.cur:gs.cur+n], bytes)
 	gs.cur += n
+}
+
+func (gs *GenStruct) PutUInt32WithSize(val uint32) {
+	// todo add validation
+	gs.PutUInt32(4)
+	gs.PutUInt32(val)
+}
+
+func (gs *GenStruct) PutStringWithSize(s string) {
+	// todo add validation
+	gs.PutUInt32(uint32(len(s)))
+	buf := make([]byte, len(s))
+	rd := strings.NewReader(s)
+	rd.Read(buf)
+	gs.PutBytes(uint32(len(s)), buf)
 }
