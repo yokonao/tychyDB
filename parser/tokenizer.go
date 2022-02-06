@@ -55,7 +55,7 @@ func (tok Token) String() string {
 	return fmt.Sprintf("{ Kind: %s, Str: %s }", tok.Kind.String(), tok.Str)
 }
 
-func Tokenize(src string) []Token {
+func Tokenize(src string, verbose bool) []Token {
 	var res []Token
 	src = strings.ToLower(src)
 	runes := []rune(src)
@@ -88,8 +88,10 @@ func Tokenize(src string) []Token {
 			continue
 		}
 	}
-	for _, tok := range res {
-		fmt.Println(tok.String())
+	if verbose {
+		for _, tok := range res {
+			fmt.Println(tok.String())
+		}
 	}
 	return res
 }
