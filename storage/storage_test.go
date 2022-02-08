@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tychyDB/storage"
+	"github.com/tychyDB/util"
 )
 
 func createStorage(t *testing.T) {
@@ -322,19 +323,44 @@ func TestUpdateIdempotent(t *testing.T) {
 		t.Errorf("expected: 33, actual: %d", res[3][3])
 	}
 	if res[1][4].(int32) != 44 {
-		t.Errorf("expected: 44, actual: %d", res[3][3])
+		t.Errorf("expected: 44, actual: %d", res[1][4])
 	}
 
 	if res[2][4].(int32) != 4 {
-		t.Errorf("expected: 4, actual: %d", res[3][3])
+		t.Errorf("expected: 4, actual: %d", res[2][4])
 	}
+	st.Update(2, "fuga", 777)
 	res, err = st.Select("hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
-	st.Update(2, "fuga", 333)
-	if res[3][3].(int32) != 33 {
-		t.Errorf("expected: 33, actual: %d", res[3][3])
+	if res[3][3].(int32) != 777 {
+		t.Errorf("expected: 777, actual: %d", res[3][3])
 	}
+	fm.Clean()
+}
+func TestUpdateFromInfo(t *testing.T) {
+	createStorage(t)
+	storage.ResetBlockId()
+
+	fm := storage.NewFileMgr()
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	st := storage.NewStorageFromFile(fm, ptb) // hogeがプライマリー
+
+	ui := st.Update(10, "fuga", 44)
+	gen := util.NewGenStruct(0, uint32(len(ui.To)))
+	gen.PutUInt32(555)
+	ui.To = gen.DumpBytes()
+	st.UpdateFromInfo(&ui)
+
+	res, err := st.Select("hoge", "fuga", "piyo", "fuga")
+	if err != nil {
+		t.Error("failure select")
+	}
+	if res[1][4].(int32) != 555 {
+		t.Errorf("expected: 555, actual: %d", res[1][4])
+	}
+
 	fm.Clean()
 }

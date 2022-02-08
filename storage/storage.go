@@ -156,6 +156,8 @@ func (st *Storage) Update(prVal interface{}, targetColName string, replaceTo int
 	} else if targetCol.ty.id == charId {
 		rd := strings.NewReader(replaceTo.(string))
 		rd.Read(toBuf)
+	} else {
+		panic(errors.New("not implemented yet"))
 	}
 	copy(fromBuf, rec.data[targetCol.pos:targetCol.pos+targetCol.ty.size])
 	copy(rec.data[targetCol.pos:targetCol.pos+targetCol.ty.size], toBuf)
@@ -165,6 +167,15 @@ func (st *Storage) Update(prVal interface{}, targetColName string, replaceTo int
 	// UpdateInfoの作成
 	updateInfo := NewUpdateInfo(curBlk.BlockNum, ptrIdx, uint32(targetColIndex), fromBuf, toBuf)
 	return updateInfo
+}
+
+func (st *Storage) UpdateFromInfo(ui *UpdateInfo) {
+	curPage := st.ptb.pin(NewBlockId(ui.PageIdx, StorageFile))
+	cellIdx := curPage.ptrs[ui.PtrIdx-1]
+	rec := curPage.cells[cellIdx].(KeyValueCell).rec
+	targetCol := st.cols[ui.ColNum]
+	copy(rec.data[targetCol.pos:targetCol.pos+targetCol.ty.size], ui.To)
+	curPage.cells[cellIdx] = KeyValueCell{key: rec.getKey(), rec: rec}
 }
 
 func (st *Storage) selectInt(col Column) (res []interface{}, err error) {
