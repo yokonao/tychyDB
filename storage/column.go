@@ -20,12 +20,11 @@ func (c Column) String() string {
 }
 
 func (c Column) toBytes() []byte {
-	nameSize := len(c.name)
-	gen := util.NewGenStruct(0, 4*IntSize+uint32(nameSize))
+	gen := util.NewGenStruct(0, 4*IntSize+c.ty.size)
 	gen.PutUInt32(uint32(c.ty.id))
 	gen.PutUInt32(c.ty.size)
 	gen.PutUInt32(c.pos)
-	gen.PutStringWithSize(c.name) // this uses 4 + len(c.name)
+	gen.PutStringWithSize(c.name, c.ty.size)
 	return gen.DumpBytes()
 }
 
@@ -35,7 +34,7 @@ func newColumnfromBytes(bytes []byte) Column {
 	c.ty.id = TypeId(iter.NextUInt32())
 	c.ty.size = iter.NextUInt32()
 	c.pos = iter.NextUInt32()
-	c.name = iter.NextStringWithSize()
+	c.name = iter.NextStringWithSize(c.ty.size)
 	return c
 }
 

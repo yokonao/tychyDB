@@ -59,11 +59,11 @@ func (gs *GenStruct) PutUInt32WithSize(val uint32) {
 	gs.PutUInt32(val)
 }
 
-func (gs *GenStruct) PutStringWithSize(s string) {
+func (gs *GenStruct) PutStringWithSize(s string, cap uint32) {
 	// todo add validation
 	gs.PutUInt32(uint32(len(s)))
-	buf := make([]byte, len(s))
+	buf := make([]byte, cap)
 	rd := strings.NewReader(s)
 	rd.Read(buf)
-	gs.PutBytes(uint32(len(s)), buf)
+	gs.PutBytes(cap, buf)
 }
