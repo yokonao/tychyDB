@@ -10,10 +10,6 @@ type MetaPage struct {
 	cols    []Column
 }
 
-func newMetaPage(blk BlockId) MetaPage {
-	return MetaPage{metaBlk: blk}
-}
-
 func newMetaPageFromBytes(bytes []byte) MetaPage {
 	pg := &MetaPage{}
 	iter := util.NewIterStruct(0, bytes)
