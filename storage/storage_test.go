@@ -1,6 +1,7 @@
 package storage_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -28,7 +29,7 @@ func createStorage(t *testing.T) {
 	st.Add(80000, 10, 0)
 	st.Flush()
 
-	_, err := st.Select("hoge", "fuga", "piyo", "fuga")
+	_, err := st.Select(false, "hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -55,7 +56,7 @@ func createStorageWithChar(t *testing.T) {
 	st.Add(80000, 10, "bigbigbigA", 0)
 	st.Flush()
 
-	_, err := st.Select("hoge", "fuga", "piyo", "hogefuga", "fuga")
+	_, err := st.Select(false, "hoge", "fuga", "piyo", "hogefuga", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -96,7 +97,7 @@ func TestStorage(t *testing.T) {
 	st.Add(-100, 89, 111)
 	st.Add(0, 0, 0)
 	st.Add(80000, 10, 0)
-	res, err := st.Select("hoge", "fuga", "piyo", "fuga")
+	res, err := st.Select(false, "hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -113,7 +114,7 @@ func TestStorage(t *testing.T) {
 		t.Errorf("expected: -13, actual: %d", res[3][3])
 	}
 	st.Flush()
-	res, err = st.Select("hoge", "fuga", "piyo", "fuga")
+	res, err = st.Select(false, "hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -148,7 +149,7 @@ func TestStorageChar(t *testing.T) {
 	countryTable.Add("Brazil", "South America")
 	countryTable.Add("Nigeria", "Africa")
 
-	res, err := countryTable.Select("name", "continent")
+	res, err := countryTable.Select(false, "name", "continent")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -164,7 +165,7 @@ func TestStorageChar(t *testing.T) {
 	}
 
 	countryTable.Flush()
-	res, err = countryTable.Select("continent", "name")
+	res, err = countryTable.Select(false, "continent", "name")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -191,7 +192,7 @@ func TestStorageMixed(t *testing.T) {
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
-	_, err := st.Select("hoge", "fuga", "piyo", "hogefuga", "fuga")
+	_, err := st.Select(true, "hoge", "fuga", "piyo", "hogefuga", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -207,7 +208,7 @@ func TestStorageRestore(t *testing.T) {
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
 
-	res, err := st.Select("hoge", "fuga", "piyo", "fuga")
+	res, err := st.Select(false, "hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -224,7 +225,7 @@ func TestStorageRestore(t *testing.T) {
 		t.Errorf("expected: -13, actual: %d", res[3][3])
 	}
 	st.Flush()
-	res, err = st.Select("hoge", "fuga", "piyo", "fuga")
+	res, err = st.Select(false, "hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -256,7 +257,7 @@ func TestUpdate(t *testing.T) {
 	st.Update(10, "fuga", 44)
 	st.Update(10, "piyo", 4)
 
-	res, err := st.Select("hoge", "fuga", "piyo", "fuga")
+	res, err := st.Select(false, "hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -279,7 +280,7 @@ func TestUpdate(t *testing.T) {
 	if res[2][4].(int32) != 4 {
 		t.Errorf("expected: 4, actual: %d", res[3][3])
 	}
-	res, err = st.Select("hoge", "fuga", "piyo", "fuga")
+	res, err = st.Select(false, "hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -306,7 +307,7 @@ func TestUpdateIdempotent(t *testing.T) {
 	st.Update(10, "piyo", 4)
 	st.Update(10, "piyo", 4)
 
-	res, err := st.Select("hoge", "fuga", "piyo", "fuga")
+	res, err := st.Select(false, "hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -330,7 +331,7 @@ func TestUpdateIdempotent(t *testing.T) {
 		t.Errorf("expected: 4, actual: %d", res[2][4])
 	}
 	st.Update(2, "fuga", 777)
-	res, err = st.Select("hoge", "fuga", "piyo", "fuga")
+	res, err = st.Select(false, "hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -354,12 +355,45 @@ func TestUpdateFromInfo(t *testing.T) {
 	ui.To = gen.DumpBytes()
 	st.UpdateFromInfo(&ui)
 
-	res, err := st.Select("hoge", "fuga", "piyo", "fuga")
+	res, err := st.Select(false, "hoge", "fuga", "piyo", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
 	if res[1][4].(int32) != 555 {
 		t.Errorf("expected: 555, actual: %d", res[1][4])
+	}
+
+	fm.Clean()
+}
+
+func TestUpdateFromInfoMixed(t *testing.T) {
+	createStorageWithChar(t)
+	storage.ResetBlockId()
+
+	fm := storage.NewFileMgr()
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	st := storage.NewStorageFromFile(fm, ptb) // hogeがプライマリー
+
+	ui := st.Update(10, "fuga", 44)
+	gen := util.NewGenStruct(0, uint32(len(ui.To)))
+	gen.PutUInt32(555)
+	ui.To = gen.DumpBytes()
+	st.UpdateFromInfo(&ui)
+
+	ui = st.Update(500, "hogefuga", "before")
+	gen = util.NewGenStruct(0, 14)
+	gen.PutStringWithSize("after", 10)
+	ui.To = gen.DumpBytes()
+	st.UpdateFromInfo(&ui)
+
+	res, err := st.Select(true, "hoge", "fuga", "piyo", "hogefuga")
+	if err != nil {
+		t.Error("failure select")
+	}
+	if res[3][5].(string) != "after" {
+		fmt.Println(len(res[3][5].(string)))
+		t.Errorf("expected: after, actual: %v", res[3][5].(string))
 	}
 
 	fm.Clean()

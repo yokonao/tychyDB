@@ -58,7 +58,6 @@ func NewStorageFromFile(fm *FileMgr, ptb *PageTable) Storage {
 
 func (st *Storage) Flush() {
 	st.ptb.Flush()
-	fmt.Println("filename -------- ", st.metaBlk.fileName)
 	st.fm.Write(st.metaBlk, st.MetaPage.toBytes())
 }
 
@@ -99,7 +98,7 @@ func (st *Storage) AddColumn(name string, ty Type) {
 		pos = 0
 	} else {
 		last := st.cols[st.ColumnLength()-1]
-		pos = last.pos + last.ty.size
+		pos = last.pos + last.Size()
 	}
 	st.cols = append(st.cols, Column{ty: ty, name: name, pos: pos})
 }
@@ -148,8 +147,9 @@ func (st *Storage) Update(prVal interface{}, targetColName string, replaceTo int
 	}
 	// レコードを抜き出す
 	rec := curPage.cells[cellIdx].(KeyValueCell).rec
-	fromBuf := make([]byte, col.ty.size)
-	toBuf := make([]byte, col.ty.size)
+	fromBuf := make([]byte, col.Size())
+	toBuf := make([]byte, col.Size())
+
 	if targetCol.ty.id == integerId {
 		val := uint32(replaceTo.(int))
 		binary.BigEndian.PutUint32(toBuf, val)
@@ -214,7 +214,6 @@ func (st *Storage) selectChar(col Column) (res []interface{}, err error) {
 		curPageIndex := uint32(pageQueue.Pop())
 		curPage := st.ptb.read(NewBlockId(curPageIndex, StorageFile))
 		if curPage.header.isLeaf {
-
 			for _, ptr := range curPage.ptrs {
 				rec := curPage.cells[ptr].(KeyValueCell).rec
 				bytes := rec.data[col.pos : col.pos+col.ty.size]
@@ -231,7 +230,7 @@ func (st *Storage) selectChar(col Column) (res []interface{}, err error) {
 	return
 }
 
-func (st *Storage) Select(names ...string) (res [][]interface{}, err error) {
+func (st *Storage) Select(verbose bool, names ...string) (res [][]interface{}, err error) {
 	for _, name := range names {
 		for _, col := range st.cols {
 			if name != col.name {
@@ -256,22 +255,25 @@ func (st *Storage) Select(names ...string) (res [][]interface{}, err error) {
 			}
 		}
 	}
-	for _, name := range names {
-		fmt.Printf("| %s\t", name)
-	}
-	fmt.Print("|")
-	fmt.Print("\n")
-	for i := 0; i < len(names); i++ {
-		fmt.Printf("| --\t")
-	}
-	fmt.Print("|")
-	fmt.Print("\n")
-	for i := 0; i < len(res[0]); i++ {
-		for j := 0; j < len(names); j++ {
-			fmt.Printf("| %v\t", res[j][i])
+	if verbose {
+		for _, name := range names {
+			fmt.Printf("| %s\t", name)
 		}
 		fmt.Print("|")
 		fmt.Print("\n")
+		for i := 0; i < len(names); i++ {
+			fmt.Printf("| --\t")
+		}
+		fmt.Print("|")
+		fmt.Print("\n")
+		for i := 0; i < len(res[0]); i++ {
+			for j := 0; j < len(names); j++ {
+				fmt.Printf("| %v\t", res[j][i])
+			}
+			fmt.Print("|")
+			fmt.Print("\n")
+		}
+
 	}
 	return res, nil
 }

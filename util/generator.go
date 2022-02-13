@@ -55,7 +55,7 @@ func (gs *GenStruct) PutBytes(n uint32, bytes []byte) {
 
 func (gs *GenStruct) PutUInt32WithSize(val uint32) {
 	// todo add validation
-	gs.PutUInt32(4)
+	gs.PutUInt32(IntSize)
 	gs.PutUInt32(val)
 }
 
@@ -66,4 +66,10 @@ func (gs *GenStruct) PutStringWithSize(s string, cap uint32) {
 	rd := strings.NewReader(s)
 	rd.Read(buf)
 	gs.PutBytes(cap, buf)
+}
+
+func ToByteStringWithSize(s string, cap uint32) []byte {
+	gs := NewGenStruct(0, IntSize+cap)
+	gs.PutStringWithSize(s, cap)
+	return gs.DumpBytes()
 }

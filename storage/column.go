@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/tychyDB/util"
 )
@@ -17,6 +16,16 @@ type Column struct {
 
 func (c Column) String() string {
 	return fmt.Sprintf("{ type: %s, name: %s }", c.ty, c.name)
+}
+
+func (c Column) Size() uint32 {
+	switch c.ty.id {
+	case integerId:
+		return IntSize
+	case charId:
+		return IntSize + c.ty.size
+	}
+	panic(errors.New("not implemented"))
 }
 
 func (c Column) toBytes() []byte {
@@ -51,10 +60,9 @@ func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
 			binary.BigEndian.PutUint32(buf, val)
 			bytes = append(bytes, buf...)
 		} else if col.ty.id == charId {
-			rd := strings.NewReader(args[i].(string))
-			buf := make([]byte, col.ty.size)
-			rd.Read(buf)
-			bytes = append(bytes, buf...)
+			gen := util.NewGenStruct(0, IntSize+col.ty.size)
+			gen.PutStringWithSize(args[i].(string), col.ty.size)
+			bytes = append(bytes, gen.DumpBytes()...)
 		} else {
 			bytes = nil
 			err = errors.New("the type of a column is not implemented")

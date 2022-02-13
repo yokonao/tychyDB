@@ -65,3 +65,9 @@ func (is *IterStruct) NextStringWithSize(cap uint32) string {
 	s := string(is.NextBytes(cap))
 	return s[:size]
 }
+
+func ReadStringWithSize(cap uint32, bytes []byte) string {
+	is := NewIterStruct(0, bytes)
+	s := is.NextStringWithSize(cap)
+	return s
+}

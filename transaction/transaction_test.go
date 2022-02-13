@@ -54,7 +54,6 @@ func TestTxn(t *testing.T) {
 	updateInfo := tb.Update(2, "fuga", 33)
 	rm.Update(txn, updateInfo)
 	rm.Commit(txn)
-	lm.Print()
 }
 
 func TestLogSerializeDeSerialize(t *testing.T) {
@@ -76,12 +75,10 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 	rm.Update(txn, updateInfo)
 	rm.Commit(txn)
 
-	lm.Print()
 	// test log manager serialize deserialize
 	pg := lm.LogPage
 	bytes := pg.ToBytes()
 	newLogPage := transaction.NewLogPageFromBytes(bytes)
-	newLogPage.Print()
 	newBytes := newLogPage.ToBytes()
 
 	if len(bytes) != len(newBytes) {
@@ -169,7 +166,6 @@ func TestLogLSNCC(t *testing.T) {
 	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 4 {
 		t.Errorf("invalid pageLSN expect %d got %d", 4, val)
 	}
-	lm.Print()
 }
 
 func TestLogIter(t *testing.T) {
@@ -190,7 +186,6 @@ func TestLogIter(t *testing.T) {
 	rm.Begin(txnB)
 	rm.Abort(txnB)
 	rm.Commit(txnA)
-	lm.Print()
 
 	logIter := transaction.NewLogIter(lm, 0)
 	log, _ := logIter.Next()
