@@ -60,6 +60,9 @@ func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
 			binary.BigEndian.PutUint32(buf, val)
 			bytes = append(bytes, buf...)
 		} else if col.ty.id == charId {
+			if len(args[i].(string)) > int(col.ty.size) {
+				panic(errors.New("string too long"))
+			}
 			gen := util.NewGenStruct(0, IntSize+col.ty.size)
 			gen.PutStringWithSize(args[i].(string), col.ty.size)
 			bytes = append(bytes, gen.DumpBytes()...)

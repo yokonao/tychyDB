@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/tychyDB/algorithm"
+	"github.com/tychyDB/util"
 )
 
 const StorageFile = "storage"
@@ -154,13 +155,12 @@ func (st *Storage) Update(prVal interface{}, targetColName string, replaceTo int
 		val := uint32(replaceTo.(int))
 		binary.BigEndian.PutUint32(toBuf, val)
 	} else if targetCol.ty.id == charId {
-		rd := strings.NewReader(replaceTo.(string))
-		rd.Read(toBuf)
+		toBuf = util.ToByteStringWithSize(replaceTo.(string), col.ty.size)
 	} else {
 		panic(errors.New("not implemented yet"))
 	}
-	copy(fromBuf, rec.data[targetCol.pos:targetCol.pos+targetCol.ty.size])
-	copy(rec.data[targetCol.pos:targetCol.pos+targetCol.ty.size], toBuf)
+	copy(fromBuf, rec.data[targetCol.pos:targetCol.pos+targetCol.Size()])
+	copy(rec.data[targetCol.pos:targetCol.pos+targetCol.Size()], toBuf)
 
 	curPage.cells[cellIdx] = KeyValueCell{key: rec.getKey(), rec: rec}
 	st.ptb.unpin(curBlk)
@@ -174,7 +174,7 @@ func (st *Storage) UpdateFromInfo(ui *UpdateInfo) {
 	cellIdx := curPage.ptrs[ui.PtrIdx-1]
 	rec := curPage.cells[cellIdx].(KeyValueCell).rec
 	targetCol := st.cols[ui.ColNum]
-	copy(rec.data[targetCol.pos:targetCol.pos+targetCol.ty.size], ui.To)
+	copy(rec.data[targetCol.pos:targetCol.pos+targetCol.Size()], ui.To)
 	curPage.cells[cellIdx] = KeyValueCell{key: rec.getKey(), rec: rec}
 }
 
@@ -190,7 +190,7 @@ func (st *Storage) selectInt(col Column) (res []interface{}, err error) {
 		if curPage.header.isLeaf {
 			for _, ptr := range curPage.ptrs {
 				rec := curPage.cells[ptr].(KeyValueCell).rec
-				bytes := rec.data[col.pos : col.pos+col.ty.size]
+				bytes := rec.data[col.pos : col.pos+col.Size()]
 				res = append(res, int32(binary.BigEndian.Uint32(bytes)))
 			}
 		} else {
@@ -216,8 +216,9 @@ func (st *Storage) selectChar(col Column) (res []interface{}, err error) {
 		if curPage.header.isLeaf {
 			for _, ptr := range curPage.ptrs {
 				rec := curPage.cells[ptr].(KeyValueCell).rec
-				bytes := rec.data[col.pos : col.pos+col.ty.size]
-				res = append(res, string(bytes))
+				bytes := rec.data[col.pos:]
+				s := util.ReadStringWithSize(col.ty.size, bytes)
+				res = append(res, s)
 			}
 		} else {
 			for i := 0; i < int(curPage.header.numOfPtr-1); i++ {
@@ -225,7 +226,6 @@ func (st *Storage) selectChar(col Column) (res []interface{}, err error) {
 			}
 			pageQueue.Push(int(curPage.cells[curPage.header.rightmostPtr].(KeyCell).pageIndex))
 		}
-
 	}
 	return
 }

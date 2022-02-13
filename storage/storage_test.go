@@ -2,7 +2,6 @@ package storage_test
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/tychyDB/storage"
@@ -140,7 +139,7 @@ func TestStorageChar(t *testing.T) {
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	countryTable := storage.NewStorage(fm, ptb)
-	countryTable.AddColumn("name", storage.CharType(10))
+	countryTable.AddColumn("name", storage.CharType(13))
 	countryTable.AddColumn("continent", storage.CharType(15))
 	countryTable.Add("Japan", "Asia")
 	countryTable.Add("China", "Asia")
@@ -154,32 +153,32 @@ func TestStorageChar(t *testing.T) {
 		t.Error("failure select")
 	}
 
-	if !strings.HasPrefix(res[0][1].(string), "China") {
+	if res[0][1].(string) != "China" {
 		t.Errorf("expected: China, actual: %s\n", res[0][1].(string))
 	}
-	if !strings.HasPrefix(res[0][2].(string), "Japan") {
-		t.Errorf("expected: Japan, actual: %s\n", res[0][2].(string))
+	if res[0][2].(string) != "Russia" {
+		t.Errorf("expected: Russia, actual: %s\n", res[0][2].(string))
 	}
-	if !strings.HasPrefix(res[0][3].(string), "Nigeria") {
-		t.Errorf("expected: Nigeria, actual: %s\n", res[0][3].(string))
+	if res[0][3].(string) != "Brazil" {
+		t.Errorf("expected: Brazil, actual: %s\n", res[0][3].(string))
 	}
 
 	countryTable.Flush()
-	res, err = countryTable.Select(false, "continent", "name")
+	res, err = countryTable.Select(true, "continent", "name")
 	if err != nil {
 		t.Error("failure select")
 	}
-	if !strings.HasPrefix(res[0][0].(string), "South America") {
-		t.Errorf("expected: South America, actual: %s\n", res[0][0].(string))
+	if res[0][0].(string) != "Asia" {
+		t.Errorf("expected: Asia, actual: %s\n", res[0][0].(string))
 	}
-	if !strings.HasPrefix(res[1][1].(string), "China") {
+	if res[1][1].(string) != "China" {
 		t.Errorf("expected: China, actual: %s\n", res[1][1].(string))
 	}
-	if !strings.HasPrefix(res[1][2].(string), "Japan") {
-		t.Errorf("expected: Japan, actual: %s\n", res[1][2].(string))
+	if res[1][2].(string) != "Russia" {
+		t.Errorf("expected: Russia, actual: %s\n", res[1][2].(string))
 	}
-	if !strings.HasPrefix(res[1][3].(string), "Nigeria") {
-		t.Errorf("expected: Nigeria, actual: %s\n", res[1][3].(string))
+	if res[1][5].(string) != "United States" {
+		t.Errorf("expected: United States, actual: %s\n", res[1][3].(string))
 	}
 	fm.Clean()
 }
@@ -192,7 +191,7 @@ func TestStorageMixed(t *testing.T) {
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
-	_, err := st.Select(true, "hoge", "fuga", "piyo", "hogefuga", "fuga")
+	_, err := st.Select(false, "hoge", "fuga", "piyo", "hogefuga", "fuga")
 	if err != nil {
 		t.Error("failure select")
 	}
@@ -387,7 +386,7 @@ func TestUpdateFromInfoMixed(t *testing.T) {
 	ui.To = gen.DumpBytes()
 	st.UpdateFromInfo(&ui)
 
-	res, err := st.Select(true, "hoge", "fuga", "piyo", "hogefuga")
+	res, err := st.Select(false, "hoge", "fuga", "piyo", "hogefuga")
 	if err != nil {
 		t.Error("failure select")
 	}
