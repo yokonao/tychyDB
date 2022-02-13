@@ -128,7 +128,7 @@ func TestLogLSN(t *testing.T) {
 
 }
 
-func TestLogLSNCC(t *testing.T) {
+func TestLogLSNConcurrently(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.ResetBlockId()
@@ -168,7 +168,7 @@ func TestLogLSNCC(t *testing.T) {
 	}
 }
 
-func TestLogIter(t *testing.T) {
+func TestLogIterator(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.ResetBlockId()
@@ -238,5 +238,4 @@ func TestLogIter(t *testing.T) {
 	if err != transaction.ErrOutOfBounds {
 		t.Errorf("expected ErrOutOfBounds got %v", err)
 	}
-
 }
