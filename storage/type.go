@@ -31,9 +31,9 @@ var IntergerType Type = Type{id: integerId, size: 4}
 
 const maxCharLen = 255
 
-func CharType(len uint32) Type {
-	if len > maxCharLen {
+func CharType(cap uint32) Type {
+	if cap > maxCharLen {
 		panic("maximum char size is 255. specify less than that.")
 	}
-	return Type{id: charId, size: len}
+	return Type{id: charId, size: cap}
 }

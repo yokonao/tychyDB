@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/tychyDB/util"
 )
@@ -19,13 +18,22 @@ func (c Column) String() string {
 	return fmt.Sprintf("{ type: %s, name: %s }", c.ty, c.name)
 }
 
+func (c Column) Size() uint32 {
+	switch c.ty.id {
+	case integerId:
+		return IntSize
+	case charId:
+		return IntSize + c.ty.size
+	}
+	panic(errors.New("not implemented"))
+}
+
 func (c Column) toBytes() []byte {
-	nameSize := len(c.name)
-	gen := util.NewGenStruct(0, 4*IntSize+uint32(nameSize))
+	gen := util.NewGenStruct(0, 4*IntSize+c.ty.size)
 	gen.PutUInt32(uint32(c.ty.id))
 	gen.PutUInt32(c.ty.size)
 	gen.PutUInt32(c.pos)
-	gen.PutStringWithSize(c.name) // this uses 4 + len(c.name)
+	gen.PutStringWithSize(c.name, c.ty.size)
 	return gen.DumpBytes()
 }
 
@@ -35,7 +43,7 @@ func newColumnfromBytes(bytes []byte) Column {
 	c.ty.id = TypeId(iter.NextUInt32())
 	c.ty.size = iter.NextUInt32()
 	c.pos = iter.NextUInt32()
-	c.name = iter.NextStringWithSize()
+	c.name = iter.NextStringWithSize(c.ty.size)
 	return c
 }
 
@@ -52,10 +60,12 @@ func encode(cols []Column, args ...interface{}) (bytes []byte, err error) {
 			binary.BigEndian.PutUint32(buf, val)
 			bytes = append(bytes, buf...)
 		} else if col.ty.id == charId {
-			rd := strings.NewReader(args[i].(string))
-			buf := make([]byte, col.ty.size)
-			rd.Read(buf)
-			bytes = append(bytes, buf...)
+			if len(args[i].(string)) > int(col.ty.size) {
+				panic(errors.New("string too long"))
+			}
+			gen := util.NewGenStruct(0, IntSize+col.ty.size)
+			gen.PutStringWithSize(args[i].(string), col.ty.size)
+			bytes = append(bytes, gen.DumpBytes()...)
 		} else {
 			bytes = nil
 			err = errors.New("the type of a column is not implemented")
