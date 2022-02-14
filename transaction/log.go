@@ -30,7 +30,7 @@ func newUniqueLog(lsn uint32, txnId uint32, logType uint32) *Log {
 }
 
 func CopyLog(log Log) Log {
-	return Log{txnId: log.txnId, lsn: log.lsn, logType: log.logType}
+	return Log{txnId: log.txnId, lsn: log.lsn, logType: log.logType, updateInfo: log.updateInfo}
 }
 
 func (log *Log) TxnID() uint32   { return log.txnId }

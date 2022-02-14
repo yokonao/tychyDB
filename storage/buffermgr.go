@@ -117,6 +117,10 @@ func (bm *BufferMgr) unRef(buffId int) {
 	buff.ref = false
 }
 
+func (bm *BufferMgr) clear(buffId int) {
+	bm.pool[buffId] = nil
+}
+
 func (bm *BufferMgr) Print() {
 	fmt.Printf("Print BufferMgr [\n")
 	for i, p := range bm.pool {

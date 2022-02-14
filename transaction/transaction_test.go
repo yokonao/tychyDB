@@ -54,6 +54,7 @@ func TestTxn(t *testing.T) {
 	updateInfo := tb.Update(2, "fuga", 33)
 	rm.Update(txn, updateInfo)
 	rm.Commit(txn)
+	fm.Clean()
 }
 
 func TestLogSerializeDeSerialize(t *testing.T) {
@@ -89,6 +90,7 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 			t.Error("byte mismatch")
 		}
 	}
+	fm.Clean()
 }
 
 func TestLogLSN(t *testing.T) {
@@ -108,27 +110,20 @@ func TestLogLSN(t *testing.T) {
 	updateInfo := st.Update(2, "fuga", 33)
 	rm.Update(txn, updateInfo)
 
-	updateInfo = st.Update(2, "fuga", 3335)
-
 	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 2 {
 		t.Errorf("invalid pageLSN expect %d got %d", 2, val)
 	}
-	rm.Update(txn, updateInfo)
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 3 {
-		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
-	}
-
 	st.Flush()
 	storage.ResetBlockId()
 	st = storage.NewStorageFromFile(fm, ptb)
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 3 {
-		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 2 {
+		t.Errorf("invalid pageLSN expect %d got %d", 2, val)
 	}
 	rm.Commit(txn)
-
+	fm.Clean()
 }
 
-func TestLogLSNCC(t *testing.T) {
+func TestLogLSNConcurrently(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.ResetBlockId()
@@ -166,9 +161,10 @@ func TestLogLSNCC(t *testing.T) {
 	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 4 {
 		t.Errorf("invalid pageLSN expect %d got %d", 4, val)
 	}
+	fm.Clean()
 }
 
-func TestLogIter(t *testing.T) {
+func TestLogIterator(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.ResetBlockId()
@@ -238,5 +234,93 @@ func TestLogIter(t *testing.T) {
 	if err != transaction.ErrOutOfBounds {
 		t.Errorf("expected ErrOutOfBounds got %v", err)
 	}
+	fm.Clean()
+}
 
+func TestUpdateFromLog(t *testing.T) {
+	transaction.UniqueTxnId = 0
+	createStorage(t)
+	storage.ResetBlockId()
+	logfm := storage.NewFileMgr()
+	fm := storage.NewFileMgr()
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	st := storage.NewStorageFromFile(fm, ptb)
+	lm := transaction.NewLogMgr(*logfm)
+	rm := transaction.NewRecoveryMgr(lm, ptb)
+	txn := transaction.NewTransaction()
+
+	rm.Begin(txn)
+	updateInfo := st.Update(2, "fuga", 33)
+	rm.Update(txn, updateInfo)
+
+	updateInfo = st.Update(2, "fuga", 3335)
+
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 2 {
+		t.Errorf("invalid pageLSN expect %d got %d", 2, val)
+	}
+	rm.Update(txn, updateInfo)
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 3 {
+		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
+	}
+
+	st.Flush()
+	storage.ResetBlockId()
+	st = storage.NewStorageFromFile(fm, ptb)
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 3 {
+		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
+	}
+	rm.Commit(txn)
+
+	st.Select(false)
+	fm.Clean()
+}
+
+func TestRedoFromLog(t *testing.T) {
+	transaction.UniqueTxnId = 0
+	storage.CreateStorage()
+
+	logfm := storage.NewFileMgr()
+	fm := storage.NewFileMgr()
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	st := storage.NewStorageFromFile(fm, ptb)
+	lm := transaction.NewLogMgr(*logfm)
+	rm := transaction.NewRecoveryMgr(lm, ptb)
+	txn := transaction.NewTransaction()
+
+	rm.Begin(txn)
+	updateInfo := st.Update(500, "fuga", 33)
+	rm.Update(txn, updateInfo)
+
+	updateInfo = st.Update(2, "fuga", 3337)
+	rm.Update(txn, updateInfo)
+
+	rm.Commit(txn)
+
+	res, _ := st.Select(false, "hoge", "fuga")
+	if val := res[1][3]; val.(int32) != 3337 {
+		t.Errorf("expected: 3337, actual: %d", val)
+	}
+	if val := res[1][5]; val.(int32) != 33 {
+		t.Errorf("expected: 33, actual: %d", val)
+	}
+	st.Clear()
+	res, _ = st.Select(false, "hoge", "fuga")
+	if val := res[1][3]; val.(int32) != -13 {
+		t.Errorf("expected: -13, actual: %d", val)
+	}
+	if val := res[1][5]; val.(int32) != 5 {
+		t.Errorf("expected: 5, actual: %d", val)
+	}
+	rm.LogRedo(&st)
+	res, _ = st.Select(false, "hoge", "fuga")
+	if val := res[1][3]; val.(int32) != 3337 {
+		t.Errorf("expected: 3337, actual: %d", val)
+	}
+	if val := res[1][5]; val.(int32) != 33 {
+		t.Errorf("expected: 33, actual: %d", val)
+	}
+
+	fm.Clean()
 }

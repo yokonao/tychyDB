@@ -26,6 +26,20 @@ func NewPageTable(bm *BufferMgr) *PageTable {
 	return ptb
 }
 
+func (ptb *PageTable) ClearBuffer() {
+	// for testing
+	for {
+		if ptb.queue.IsEmpty() {
+			break
+		}
+		curBlkNum := ptb.queue.Pop()
+		curBuffId := ptb.table[int(curBlkNum)]
+		delete(ptb.table, int(curBlkNum))
+		ptb.bm.clear(curBuffId)
+	}
+	ptb.numOfPin = 0
+}
+
 func (ptb *PageTable) Flush() {
 	for {
 		if ptb.queue.IsEmpty() {

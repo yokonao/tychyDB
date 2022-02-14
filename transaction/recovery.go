@@ -33,3 +33,21 @@ func (rm *RecoveryMgr) Update(txn *Transaction, updateInfo storage.UpdateInfo) {
 	log.addUpdateInfo(updateInfo)
 	rm.ptb.SetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile), log.lsn)
 }
+
+func (rm *RecoveryMgr) LogRedo(st *storage.Storage) {
+	logIter := NewLogIter(rm.lm, 0)
+	for !logIter.IsEnd() {
+		log, err := logIter.Next()
+		if err != nil {
+			panic(ErrOutOfBounds)
+		}
+
+		switch log.logType {
+		case BEGIN, COMMIT, ABORT:
+			continue
+		case UPDATE:
+			st.UpdateFromInfo(&log.updateInfo)
+		}
+	}
+	st.Flush()
+}
