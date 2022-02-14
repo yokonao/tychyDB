@@ -236,3 +236,40 @@ func TestLogIterator(t *testing.T) {
 	}
 	fm.Clean()
 }
+
+func TestUpdateFromLog(t *testing.T) {
+	transaction.UniqueTxnId = 0
+	createStorage(t)
+	storage.ResetBlockId()
+	logfm := storage.NewFileMgr()
+	fm := storage.NewFileMgr()
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	st := storage.NewStorageFromFile(fm, ptb)
+	lm := transaction.NewLogMgr(*logfm)
+	rm := transaction.NewRecoveryMgr(lm, ptb)
+	txn := transaction.NewTransaction()
+
+	rm.Begin(txn)
+	updateInfo := st.Update(2, "fuga", 33)
+	rm.Update(txn, updateInfo)
+
+	updateInfo = st.Update(2, "fuga", 3335)
+
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 2 {
+		t.Errorf("invalid pageLSN expect %d got %d", 2, val)
+	}
+	rm.Update(txn, updateInfo)
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 3 {
+		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
+	}
+
+	st.Flush()
+	storage.ResetBlockId()
+	st = storage.NewStorageFromFile(fm, ptb)
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 3 {
+		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
+	}
+	rm.Commit(txn)
+	fm.Clean()
+}
