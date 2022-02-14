@@ -54,6 +54,7 @@ func TestTxn(t *testing.T) {
 	updateInfo := tb.Update(2, "fuga", 33)
 	rm.Update(txn, updateInfo)
 	rm.Commit(txn)
+	fm.Clean()
 }
 
 func TestLogSerializeDeSerialize(t *testing.T) {
@@ -89,6 +90,7 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 			t.Error("byte mismatch")
 		}
 	}
+	fm.Clean()
 }
 
 func TestLogLSN(t *testing.T) {
@@ -108,24 +110,17 @@ func TestLogLSN(t *testing.T) {
 	updateInfo := st.Update(2, "fuga", 33)
 	rm.Update(txn, updateInfo)
 
-	updateInfo = st.Update(2, "fuga", 3335)
-
 	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 2 {
 		t.Errorf("invalid pageLSN expect %d got %d", 2, val)
 	}
-	rm.Update(txn, updateInfo)
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 3 {
-		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
-	}
-
 	st.Flush()
 	storage.ResetBlockId()
 	st = storage.NewStorageFromFile(fm, ptb)
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 3 {
-		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
+	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 2 {
+		t.Errorf("invalid pageLSN expect %d got %d", 2, val)
 	}
 	rm.Commit(txn)
-
+	fm.Clean()
 }
 
 func TestLogLSNConcurrently(t *testing.T) {
@@ -166,6 +161,7 @@ func TestLogLSNConcurrently(t *testing.T) {
 	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 4 {
 		t.Errorf("invalid pageLSN expect %d got %d", 4, val)
 	}
+	fm.Clean()
 }
 
 func TestLogIterator(t *testing.T) {
@@ -238,4 +234,5 @@ func TestLogIterator(t *testing.T) {
 	if err != transaction.ErrOutOfBounds {
 		t.Errorf("expected ErrOutOfBounds got %v", err)
 	}
+	fm.Clean()
 }
