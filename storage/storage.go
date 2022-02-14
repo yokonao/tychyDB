@@ -46,12 +46,13 @@ func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
 
 func NewStorageFromFile(fm *FileMgr, ptb *PageTable) Storage {
 	st := Storage{}
+	st.fm = fm
+	st.ptb = ptb
+
 	blk := newUniqueBlockId(StorageFile)
 	if blk.BlockNum != 0 {
 		panic(errors.New("expect 0"))
 	}
-	st.fm = fm
-	st.ptb = ptb
 	_, bytes := fm.Read(blk)
 	st.MetaPage = newMetaPageFromBytes(bytes)
 	return st
@@ -60,6 +61,12 @@ func NewStorageFromFile(fm *FileMgr, ptb *PageTable) Storage {
 func (st *Storage) Flush() {
 	st.ptb.Flush()
 	st.fm.Write(st.metaBlk, st.MetaPage.toBytes())
+}
+
+func (st *Storage) Clear() {
+	st.ptb.ClearBuffer()
+	_, bytes := st.fm.Read(NewBlockId(0, StorageFile))
+	st.MetaPage = newMetaPageFromBytes(bytes)
 }
 
 func (st *Storage) addRecord(rec Record) {
