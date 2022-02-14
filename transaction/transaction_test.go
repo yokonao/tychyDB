@@ -271,5 +271,47 @@ func TestUpdateFromLog(t *testing.T) {
 		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
 	}
 	rm.Commit(txn)
+
+	st.Select(false)
+	fm.Clean()
+}
+
+func TestRedoFromLog(t *testing.T) {
+	transaction.UniqueTxnId = 0
+	storage.CreateStorage()
+
+	logfm := storage.NewFileMgr()
+	fm := storage.NewFileMgr()
+	bm := storage.NewBufferMgr(fm)
+	ptb := storage.NewPageTable(bm)
+	st := storage.NewStorageFromFile(fm, ptb)
+	lm := transaction.NewLogMgr(*logfm)
+	rm := transaction.NewRecoveryMgr(lm, ptb)
+	txn := transaction.NewTransaction()
+
+	rm.Begin(txn)
+	updateInfo := st.Update(500, "fuga", 33)
+	rm.Update(txn, updateInfo)
+	updateInfo = st.Update(2, "fuga", 3337)
+	rm.Update(txn, updateInfo)
+	rm.Commit(txn)
+
+	res, _ := st.Select(false, "hoge", "fuga")
+	if val := res[1][3]; val.(int32) != 3337 {
+		t.Errorf("expected: 3337, actual: %d", val)
+	}
+	if val := res[1][5]; val.(int32) != 33 {
+		t.Errorf("expected: 33, actual: %d", val)
+	}
+	st.Clear()
+	res, _ = st.Select(false, "hoge", "fuga")
+	if val := res[1][3]; val.(int32) != -13 {
+		t.Errorf("expected: -13, actual: %d", val)
+	}
+	if val := res[1][5]; val.(int32) != 5 {
+		t.Errorf("expected: 5, actual: %d", val)
+	}
+
+	lm.LogPage.Print()
 	fm.Clean()
 }
