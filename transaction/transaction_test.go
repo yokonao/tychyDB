@@ -292,8 +292,10 @@ func TestRedoFromLog(t *testing.T) {
 	rm.Begin(txn)
 	updateInfo := st.Update(500, "fuga", 33)
 	rm.Update(txn, updateInfo)
+
 	updateInfo = st.Update(2, "fuga", 3337)
 	rm.Update(txn, updateInfo)
+
 	rm.Commit(txn)
 
 	res, _ := st.Select(false, "hoge", "fuga")
@@ -311,7 +313,14 @@ func TestRedoFromLog(t *testing.T) {
 	if val := res[1][5]; val.(int32) != 5 {
 		t.Errorf("expected: 5, actual: %d", val)
 	}
+	rm.LogRedo(&st)
+	res, _ = st.Select(false, "hoge", "fuga")
+	if val := res[1][3]; val.(int32) != 3337 {
+		t.Errorf("expected: 3337, actual: %d", val)
+	}
+	if val := res[1][5]; val.(int32) != 33 {
+		t.Errorf("expected: 33, actual: %d", val)
+	}
 
-	lm.LogPage.Print()
 	fm.Clean()
 }

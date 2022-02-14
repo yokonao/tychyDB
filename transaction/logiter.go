@@ -10,6 +10,10 @@ func NewLogIter(lm *LogMgr, startLSN uint32) *LogIter {
 	return logIter
 }
 
+func (logIter *LogIter) IsEnd() bool {
+	return logIter.lm.isEnd(logIter.curLSN)
+}
+
 func (logIter *LogIter) Next() (Log, error) {
 	idx := logIter.curLSN
 	logIter.curLSN += 1

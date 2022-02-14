@@ -110,7 +110,7 @@ func TestStorageChar(t *testing.T) {
 	}
 
 	countryTable.Flush()
-	res, err = countryTable.Select(true, "continent", "name")
+	res, err = countryTable.Select(false, "continent", "name")
 	if err != nil {
 		t.Error("failure select")
 	}

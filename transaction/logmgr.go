@@ -44,6 +44,10 @@ func (lm *LogMgr) logAt(idx uint32) (Log, error) {
 	return lm.LogPage.logAt(idx)
 }
 
+func (lm *LogMgr) isEnd(idx uint32) bool {
+	return lm.LogPage.isEnd(idx)
+}
+
 func (lm *LogMgr) getUniqueLSN() uint32 {
 	res := lm.UniqueLSN
 	lm.UniqueLSN++
