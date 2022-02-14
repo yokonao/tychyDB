@@ -8,59 +8,6 @@ import (
 	"github.com/tychyDB/util"
 )
 
-func createStorage(t *testing.T) {
-	storage.ResetBlockId()
-	fm := storage.NewFileMgr()
-	bm := storage.NewBufferMgr(fm)
-	ptb := storage.NewPageTable(bm)
-
-	st := storage.NewStorage(fm, ptb)
-	st.AddColumn("hoge", storage.IntergerType)
-	st.AddColumn("fuga", storage.IntergerType)
-	st.AddColumn("piyo", storage.IntergerType)
-	st.Add(2, -13, 89)
-	st.Add(10000, 4, 44)
-	st.Add(500, 5, 90)
-	st.Add(10, 45, -999)
-	st.Add(-345, 77, 43)
-	st.Add(-100, 89, 111)
-	st.Add(0, 0, 0)
-	st.Add(80000, 10, 0)
-	st.Flush()
-
-	_, err := st.Select(false, "hoge", "fuga", "piyo", "fuga")
-	if err != nil {
-		t.Error("failure select")
-	}
-}
-
-func createStorageWithChar(t *testing.T) {
-	storage.ResetBlockId()
-	fm := storage.NewFileMgr()
-	bm := storage.NewBufferMgr(fm)
-	ptb := storage.NewPageTable(bm)
-
-	st := storage.NewStorage(fm, ptb)
-	st.AddColumn("hoge", storage.IntergerType)
-	st.AddColumn("fuga", storage.IntergerType)
-	st.AddColumn("hogefuga", storage.CharType(10))
-	st.AddColumn("piyo", storage.IntergerType)
-	st.Add(2, -13, "pika", 89)
-	st.Add(10000, 4, "pika", 44)
-	st.Add(500, 5, "pokemon", 90)
-	st.Add(10, 45, "luckey", -999)
-	st.Add(-345, 77, "767", 43)
-	st.Add(-100, 89, "r", 111)
-	st.Add(0, 0, "", 0)
-	st.Add(80000, 10, "bigbigbigA", 0)
-	st.Flush()
-
-	_, err := st.Select(false, "hoge", "fuga", "piyo", "hogefuga", "fuga")
-	if err != nil {
-		t.Error("failure select")
-	}
-}
-
 func TestStorageEasy(t *testing.T) {
 	storage.ResetBlockId()
 	fm := storage.NewFileMgr()
@@ -134,7 +81,6 @@ func TestStorage(t *testing.T) {
 
 func TestStorageChar(t *testing.T) {
 	storage.ResetBlockId()
-
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
@@ -184,8 +130,7 @@ func TestStorageChar(t *testing.T) {
 }
 
 func TestStorageMixed(t *testing.T) {
-	createStorageWithChar(t)
-	storage.ResetBlockId()
+	storage.CreateStorageWithChar()
 
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
@@ -199,8 +144,7 @@ func TestStorageMixed(t *testing.T) {
 }
 
 func TestStorageRestore(t *testing.T) {
-	createStorage(t)
-	storage.ResetBlockId()
+	storage.CreateStorage()
 
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
@@ -244,8 +188,7 @@ func TestStorageRestore(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	createStorage(t)
-	storage.ResetBlockId()
+	storage.CreateStorage()
 
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
@@ -291,8 +234,7 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestUpdateIdempotent(t *testing.T) {
-	createStorage(t)
-	storage.ResetBlockId()
+	storage.CreateStorage()
 
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
@@ -340,8 +282,7 @@ func TestUpdateIdempotent(t *testing.T) {
 	fm.Clean()
 }
 func TestUpdateFromInfo(t *testing.T) {
-	createStorage(t)
-	storage.ResetBlockId()
+	storage.CreateStorage()
 
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
@@ -366,8 +307,7 @@ func TestUpdateFromInfo(t *testing.T) {
 }
 
 func TestUpdateFromInfoMixed(t *testing.T) {
-	createStorageWithChar(t)
-	storage.ResetBlockId()
+	storage.CreateStorageWithChar()
 
 	fm := storage.NewFileMgr()
 	bm := storage.NewBufferMgr(fm)
