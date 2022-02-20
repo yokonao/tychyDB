@@ -40,9 +40,12 @@ func TestTxn(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.ResetBlockId()
-	logfm := storage.NewFileMgr()
 
+	logfm := storage.NewFileMgr()
+	defer logfm.Clean()
 	fm := storage.NewFileMgr()
+	defer fm.Clean()
+
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	tb := storage.NewStorageFromFile(fm, ptb)
@@ -54,16 +57,18 @@ func TestTxn(t *testing.T) {
 	updateInfo := tb.Update(2, "fuga", 33)
 	rm.Update(txn, updateInfo)
 	rm.Commit(txn)
-	fm.Clean()
 }
 
 func TestLogSerializeDeSerialize(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.ResetBlockId()
-	logfm := storage.NewFileMgr()
 
+	logfm := storage.NewFileMgr()
+	defer logfm.Clean()
 	fm := storage.NewFileMgr()
+	defer fm.Clean()
+
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
@@ -90,15 +95,18 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 			t.Error("byte mismatch")
 		}
 	}
-	fm.Clean()
 }
 
 func TestLogLSN(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.ResetBlockId()
+
 	logfm := storage.NewFileMgr()
+	defer logfm.Clean()
 	fm := storage.NewFileMgr()
+	defer fm.Clean()
+
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
@@ -120,15 +128,18 @@ func TestLogLSN(t *testing.T) {
 		t.Errorf("invalid pageLSN expect %d got %d", 2, val)
 	}
 	rm.Commit(txn)
-	fm.Clean()
 }
 
 func TestLogLSNConcurrently(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.ResetBlockId()
+
 	logfm := storage.NewFileMgr()
+	defer logfm.Clean()
 	fm := storage.NewFileMgr()
+	defer fm.Clean()
+
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
@@ -161,15 +172,18 @@ func TestLogLSNConcurrently(t *testing.T) {
 	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 4 {
 		t.Errorf("invalid pageLSN expect %d got %d", 4, val)
 	}
-	fm.Clean()
 }
 
 func TestLogIterator(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.ResetBlockId()
+
 	logfm := storage.NewFileMgr()
+	defer logfm.Clean()
 	fm := storage.NewFileMgr()
+	defer fm.Clean()
+
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	lm := transaction.NewLogMgr(*logfm)
@@ -234,15 +248,18 @@ func TestLogIterator(t *testing.T) {
 	if err != transaction.ErrOutOfBounds {
 		t.Errorf("expected ErrOutOfBounds got %v", err)
 	}
-	fm.Clean()
 }
 
 func TestUpdateFromLog(t *testing.T) {
 	transaction.UniqueTxnId = 0
 	createStorage(t)
 	storage.ResetBlockId()
+
 	logfm := storage.NewFileMgr()
+	defer logfm.Clean()
 	fm := storage.NewFileMgr()
+	defer fm.Clean()
+
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
@@ -273,7 +290,6 @@ func TestUpdateFromLog(t *testing.T) {
 	rm.Commit(txn)
 
 	st.Select(false)
-	fm.Clean()
 }
 
 func TestRedoFromLog(t *testing.T) {
@@ -281,7 +297,10 @@ func TestRedoFromLog(t *testing.T) {
 	storage.CreateStorage()
 
 	logfm := storage.NewFileMgr()
+	defer logfm.Clean()
 	fm := storage.NewFileMgr()
+	defer fm.Clean()
+
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
@@ -321,6 +340,4 @@ func TestRedoFromLog(t *testing.T) {
 	if val := res[1][5]; val.(int32) != 33 {
 		t.Errorf("expected: 33, actual: %d", val)
 	}
-
-	fm.Clean()
 }
