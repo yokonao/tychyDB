@@ -113,3 +113,23 @@ func TestGenBytes(t *testing.T) {
 		t.Errorf("expected %d, but got %d", 111, i)
 	}
 }
+
+func TestPutUInt32WithSize(t *testing.T) {
+	gs := util.NewGenStruct(0, 100)
+	gs.PutStringWithSize("hoge", 10)
+
+	iter := util.NewIterStruct(0, gs.DumpBytes())
+
+	if s := iter.NextStringWithSize(10); s != "hoge" {
+		t.Errorf("expected %s, bug got %s", "hoge", s)
+	}
+}
+
+func TestToByteStringWithSize(t *testing.T) {
+	bytes := util.ToByteStringWithSize("hogehoge", 8)
+	iter := util.NewIterStruct(0, bytes)
+
+	if s := iter.NextStringWithSize(8); s != "hogehoge" {
+		t.Errorf("expected %s, bug got %s", "hogehoge", s)
+	}
+}
