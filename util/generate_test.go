@@ -3,6 +3,7 @@ package util_test
 import (
 	"testing"
 
+	"github.com/tychyDB/assert"
 	"github.com/tychyDB/util"
 )
 
@@ -12,20 +13,10 @@ func TestGenUInt32(t *testing.T) {
 	gs.PutUInt32(11)
 	gs.PutUInt32(111)
 
-	// should avoid IterStrcut?
 	iter := util.NewIterStruct(0, gs.DumpBytes())
-
-	if i := iter.NextUInt32(); i != 10 {
-		t.Errorf("expected %d, but got %d", 10, i)
-	}
-
-	if i := iter.NextUInt32(); i != 11 {
-		t.Errorf("expected %d, but got %d", 11, i)
-	}
-
-	if i := iter.NextUInt32(); i != 111 {
-		t.Errorf("expected %d, but got %d", 111, i)
-	}
+	assert.EqualUint32(t, iter.NextUInt32(), 10)
+	assert.EqualUint32(t, iter.NextUInt32(), 11)
+	assert.EqualUint32(t, iter.NextUInt32(), 111)
 }
 
 func TestGenBool(t *testing.T) {
@@ -37,33 +28,13 @@ func TestGenBool(t *testing.T) {
 	gs.PutUInt32(111)
 	gs.PutBool(true)
 
-	// should avoid IterStrcut?
 	iter := util.NewIterStruct(0, gs.DumpBytes())
-
-	if i := iter.NextUInt32(); i != 10 {
-		t.Errorf("expected %d, but got %d", 10, i)
-	}
-
-	if i := iter.NextBool(); i {
-		t.Errorf("expected %v, but got %v", false, i)
-	}
-
-	if i := iter.NextUInt32(); i != 11 {
-		t.Errorf("expected %d, but got %d", 11, i)
-	}
-
-	if i := iter.NextBool(); !i {
-		t.Errorf("expected %v, but got %v", true, i)
-	}
-
-	if i := iter.NextUInt32(); i != 111 {
-		t.Errorf("expected %d, but got %d", 111, i)
-	}
-
-	if i := iter.NextBool(); !i {
-		t.Errorf("expected %v, but got %v", true, i)
-	}
-
+	assert.EqualUint32(t, iter.NextUInt32(), 10)
+	assert.EqualBool(t, iter.NextBool(), false)
+	assert.EqualUint32(t, iter.NextUInt32(), 11)
+	assert.EqualBool(t, iter.NextBool(), true)
+	assert.EqualUint32(t, iter.NextUInt32(), 111)
+	assert.EqualBool(t, iter.NextBool(), true)
 }
 
 func TestGenBytes(t *testing.T) {
@@ -78,40 +49,15 @@ func TestGenBytes(t *testing.T) {
 	gs.PutUInt32(22)
 	gs.PutBytes(12, t_gs.DumpBytes())
 
-	// should avoid IterStrcut?
 	iter := util.NewIterStruct(0, gs.DumpBytes())
-
-	if i := iter.NextUInt32(); i != 11 {
-		t.Errorf("expected %d, but got %d", 11, i)
-	}
-
-	if i := iter.NextUInt32(); i != 10 {
-		t.Errorf("expected %d, but got %d", 10, i)
-	}
-
-	if i := iter.NextUInt32(); i != 11 {
-		t.Errorf("expected %d, but got %d", 11, i)
-	}
-
-	if i := iter.NextUInt32(); i != 111 {
-		t.Errorf("expected %d, but got %d", 111, i)
-	}
-
-	if i := iter.NextUInt32(); i != 22 {
-		t.Errorf("expected %d, but got %d", 22, i)
-	}
-
-	if i := iter.NextUInt32(); i != 10 {
-		t.Errorf("expected %d, but got %d", 10, i)
-	}
-
-	if i := iter.NextUInt32(); i != 11 {
-		t.Errorf("expected %d, but got %d", 11, i)
-	}
-
-	if i := iter.NextUInt32(); i != 111 {
-		t.Errorf("expected %d, but got %d", 111, i)
-	}
+	assert.EqualUint32(t, iter.NextUInt32(), 11)
+	assert.EqualUint32(t, iter.NextUInt32(), 10)
+	assert.EqualUint32(t, iter.NextUInt32(), 11)
+	assert.EqualUint32(t, iter.NextUInt32(), 111)
+	assert.EqualUint32(t, iter.NextUInt32(), 22)
+	assert.EqualUint32(t, iter.NextUInt32(), 10)
+	assert.EqualUint32(t, iter.NextUInt32(), 11)
+	assert.EqualUint32(t, iter.NextUInt32(), 111)
 }
 
 func TestPutUInt32WithSize(t *testing.T) {
@@ -119,17 +65,12 @@ func TestPutUInt32WithSize(t *testing.T) {
 	gs.PutStringWithSize("hoge", 10)
 
 	iter := util.NewIterStruct(0, gs.DumpBytes())
-
-	if s := iter.NextStringWithSize(10); s != "hoge" {
-		t.Errorf("expected %s, bug got %s", "hoge", s)
-	}
+	assert.EqualString(t, iter.NextStringWithSize(10), "hoge")
 }
 
 func TestToByteStringWithSize(t *testing.T) {
 	bytes := util.ToByteStringWithSize("hogehoge", 8)
-	iter := util.NewIterStruct(0, bytes)
 
-	if s := iter.NextStringWithSize(8); s != "hogehoge" {
-		t.Errorf("expected %s, bug got %s", "hogehoge", s)
-	}
+	iter := util.NewIterStruct(0, bytes)
+	assert.EqualString(t, iter.NextStringWithSize(8), "hogehoge")
 }
