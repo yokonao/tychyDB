@@ -1,7 +1,6 @@
 package storage
 
 func CreateStorage() {
-	ResetBlockId()
 	fm := NewFileMgr()
 	bm := NewBufferMgr(fm)
 	ptb := NewPageTable(bm)
@@ -19,11 +18,9 @@ func CreateStorage() {
 	st.Add(0, 0, 0)
 	st.Add(80000, 10, 0)
 	st.Flush()
-	ResetBlockId()
 }
 
 func CreateStorageWithChar() {
-	ResetBlockId()
 	fm := NewFileMgr()
 	bm := NewBufferMgr(fm)
 	ptb := NewPageTable(bm)
@@ -42,5 +39,4 @@ func CreateStorageWithChar() {
 	st.Add(0, 0, "", 0)
 	st.Add(80000, 10, "bigbigbigA", 0)
 	st.Flush()
-	ResetBlockId()
 }
