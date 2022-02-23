@@ -53,13 +53,6 @@ func (is *IterStruct) NextBytes(n uint32) []byte {
 	return res
 }
 
-func (is *IterStruct) NextUint32WithSize() uint32 {
-	if size := is.NextUInt32(); size != 4 {
-		panic(errors.New("expect size 4"))
-	}
-	return is.NextUInt32()
-}
-
 func (is *IterStruct) NextStringWithSize(cap uint32) string {
 	size := is.NextUInt32()
 	s := string(is.NextBytes(cap))

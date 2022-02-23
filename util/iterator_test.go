@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"testing"
 
+	"github.com/tychyDB/assert"
 	"github.com/tychyDB/util"
 )
 
@@ -14,18 +15,9 @@ func TestIterUInt32(t *testing.T) {
 	binary.BigEndian.PutUint32(bytes[2*util.IntSize:3*util.IntSize], 30)
 
 	iter := util.NewIterStruct(0, bytes)
-
-	if i := iter.NextUInt32(); i != 10 {
-		t.Errorf("expected %d, but got %d", 10, i)
-	}
-
-	if i := iter.NextUInt32(); i != 16 {
-		t.Errorf("expected %d, but got %d", 16, i)
-	}
-
-	if i := iter.NextUInt32(); i != 30 {
-		t.Errorf("expected %d, but got %d", 30, i)
-	}
+	assert.EqualUInt32(t, iter.NextUInt32(), 10)
+	assert.EqualUInt32(t, iter.NextUInt32(), 16)
+	assert.EqualUInt32(t, iter.NextUInt32(), 30)
 }
 
 func TestIterBool(t *testing.T) {
@@ -35,19 +27,11 @@ func TestIterBool(t *testing.T) {
 	bytes[5] = 0
 
 	iter := util.NewIterStruct(0, bytes)
-
-	if i := iter.NextBool(); !i {
-		t.Errorf("expected %v, but got %v", true, i)
-	}
-
-	if i := iter.NextUInt32(); i != 16 {
-		t.Errorf("expected %d, but got %d", 16, i)
-	}
-
-	if i := iter.NextBool(); i {
-		t.Errorf("expected %v, but got %v", false, i)
-	}
+	assert.Equal(t, iter.NextBool(), true)
+	assert.EqualUInt32(t, iter.NextUInt32(), 16)
+	assert.Equal(t, iter.NextBool(), false)
 }
+
 func TestIterBytes(t *testing.T) {
 	bytes := make([]byte, 12)
 	binary.BigEndian.PutUint32(bytes[:util.IntSize], 10)
