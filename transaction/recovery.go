@@ -5,31 +5,31 @@ import (
 )
 
 type RecoveryMgr struct {
-	lm  *LogMgr
-	ptb *storage.PageTable
+	logManager *LogMgr
+	ptb        *storage.PageTable
 }
 
-func NewRecoveryMgr(lm *LogMgr, ptb *storage.PageTable) *RecoveryMgr {
+func NewRecoveryMgr(logManager *LogMgr, ptb *storage.PageTable) *RecoveryMgr {
 	recoveryManager := &RecoveryMgr{}
-	recoveryManager.lm = lm
+	recoveryManager.logManager = logManager
 	recoveryManager.ptb = ptb
 	return recoveryManager
 }
 
 func (recoveryManager *RecoveryMgr) Begin(txn *Transaction) {
-	recoveryManager.lm.addLog(txn.txnId, BEGIN)
+	recoveryManager.logManager.addLog(txn.txnId, BEGIN)
 }
 
 func (recoveryManager *RecoveryMgr) Commit(txn *Transaction) {
-	recoveryManager.lm.addLog(txn.txnId, COMMIT)
-	recoveryManager.lm.WritePage()
+	recoveryManager.logManager.addLog(txn.txnId, COMMIT)
+	recoveryManager.logManager.WritePage()
 }
 func (recoveryManager *RecoveryMgr) Abort(txn *Transaction) {
-	recoveryManager.lm.addLog(txn.txnId, ABORT)
+	recoveryManager.logManager.addLog(txn.txnId, ABORT)
 }
 
 func (recoveryManager *RecoveryMgr) Update(txn *Transaction, updateInfo storage.UpdateInfo) {
-	log := recoveryManager.lm.addLog(txn.txnId, UPDATE)
+	log := recoveryManager.logManager.addLog(txn.txnId, UPDATE)
 	log.addUpdateInfo(updateInfo)
 	recoveryManager.ptb.SetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile), log.lsn)
 }
@@ -38,7 +38,7 @@ func (recoveryManager *RecoveryMgr) LogRedo(st *storage.Storage) {
 	redoPool := map[TxnId]bool{}
 	txnTable := map[TxnId]TxnStatus{}
 	// log file full scan
-	logIter := NewLogIter(recoveryManager.lm, 0)
+	logIter := NewLogIter(recoveryManager.logManager, 0)
 	for !logIter.IsEnd() {
 		log, err := logIter.Next()
 		if err != nil {
@@ -60,7 +60,7 @@ func (recoveryManager *RecoveryMgr) LogRedo(st *storage.Storage) {
 	}
 
 	// redo if txn is valid
-	logIter = NewLogIter(recoveryManager.lm, 0)
+	logIter = NewLogIter(recoveryManager.logManager, 0)
 	for !logIter.IsEnd() {
 		log, err := logIter.Next()
 		if err != nil {

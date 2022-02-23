@@ -12,8 +12,8 @@ func CreateLogFile() {
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
-	lm := NewLogMgr(*logfm)
-	recoveryManager := NewRecoveryMgr(lm, ptb)
+	logManager := NewLogMgr(*logfm)
+	recoveryManager := NewRecoveryMgr(logManager, ptb)
 	/*
 	   | hoge  | fuga  | piyo  |
 	   | --    | --    | --    |

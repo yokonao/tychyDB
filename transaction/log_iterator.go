@@ -1,21 +1,21 @@
 package transaction
 
 type LogIter struct {
-	lm     *LogMgr
-	curLSN uint32
+	logManager *LogMgr
+	curLSN     uint32
 }
 
-func NewLogIter(lm *LogMgr, startLSN uint32) *LogIter {
-	logIter := &LogIter{lm: lm, curLSN: startLSN}
+func NewLogIter(logManager *LogMgr, startLSN uint32) *LogIter {
+	logIter := &LogIter{logManager: logManager, curLSN: startLSN}
 	return logIter
 }
 
 func (logIter *LogIter) IsEnd() bool {
-	return logIter.lm.isEnd(logIter.curLSN)
+	return logIter.logManager.isEnd(logIter.curLSN)
 }
 
 func (logIter *LogIter) Next() (Log, error) {
 	idx := logIter.curLSN
 	logIter.curLSN += 1
-	return logIter.lm.logAt(idx)
+	return logIter.logManager.logAt(idx)
 }

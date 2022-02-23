@@ -46,8 +46,8 @@ func TestTxn(t *testing.T) {
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	tb := storage.NewStorageFromFile(fm, ptb)
-	lm := transaction.NewLogMgr(*logfm)
-	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
+	logManager := transaction.NewLogMgr(*logfm)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
 
 	txn := transaction.NewTransaction()
 	recoveryManager.Begin(txn)
@@ -67,8 +67,8 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
-	lm := transaction.NewLogMgr(*logfm)
-	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
+	logManager := transaction.NewLogMgr(*logfm)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
 	txn := transaction.NewTransaction()
 
 	recoveryManager.Begin(txn)
@@ -77,7 +77,7 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 	recoveryManager.Commit(txn)
 
 	// test log manager serialize deserialize
-	pg := lm.LogPage
+	pg := logManager.LogPage
 	bytes := pg.ToBytes()
 	newLogPage := transaction.NewLogPageFromBytes(bytes)
 	newBytes := newLogPage.ToBytes()
@@ -103,8 +103,8 @@ func TestLogLSN(t *testing.T) {
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
-	lm := transaction.NewLogMgr(*logfm)
-	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
+	logManager := transaction.NewLogMgr(*logfm)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
 	txn := transaction.NewTransaction()
 
 	recoveryManager.Begin(txn)
@@ -130,8 +130,8 @@ func TestLogLSNConcurrently(t *testing.T) {
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
-	lm := transaction.NewLogMgr(*logfm)
-	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
+	logManager := transaction.NewLogMgr(*logfm)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
 
 	txnA := transaction.NewTransaction()
 	txnB := transaction.NewTransaction()
@@ -166,8 +166,8 @@ func TestLogIterator(t *testing.T) {
 
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
-	lm := transaction.NewLogMgr(*logfm)
-	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
+	logManager := transaction.NewLogMgr(*logfm)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
 
 	txnA := transaction.NewTransaction()
 	txnB := transaction.NewTransaction()
@@ -177,7 +177,7 @@ func TestLogIterator(t *testing.T) {
 	recoveryManager.Abort(txnB)
 	recoveryManager.Commit(txnA)
 
-	logIter := transaction.NewLogIter(lm, 0)
+	logIter := transaction.NewLogIter(logManager, 0)
 	log, _ := logIter.Next()
 	assert.EqualUInt32(t, log.LSN(), 1)
 	assert.EqualUInt32(t, uint32(log.TxnID()), 0)
@@ -215,8 +215,8 @@ func TestUpdateFromLog(t *testing.T) {
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
-	lm := transaction.NewLogMgr(*logfm)
-	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
+	logManager := transaction.NewLogMgr(*logfm)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
 	txn := transaction.NewTransaction()
 
 	recoveryManager.Begin(txn)
@@ -249,8 +249,8 @@ func TestRedoFromLog(t *testing.T) {
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
-	lm := transaction.NewLogMgr(*logfm)
-	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
+	logManager := transaction.NewLogMgr(*logfm)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
 	txn := transaction.NewTransaction()
 
 	recoveryManager.Begin(txn)
@@ -289,8 +289,8 @@ func TestRedoFromLogFile(t *testing.T) {
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
-	lm := transaction.NewLogMgrFromFile(*fm)
-	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
+	logManager := transaction.NewLogMgrFromFile(*fm)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
 
 	res, _ := st.Select(false, "hoge", "fuga", "piyo")
 	assert.EqualInt32(t, res[1][3].(int32), -13)
