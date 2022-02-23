@@ -47,13 +47,13 @@ func TestTxn(t *testing.T) {
 	ptb := storage.NewPageTable(bm)
 	tb := storage.NewStorageFromFile(fm, ptb)
 	lm := transaction.NewLogMgr(*logfm)
-	rm := transaction.NewRecoveryMgr(lm, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
 
 	txn := transaction.NewTransaction()
-	rm.Begin(txn)
+	recoveryManager.Begin(txn)
 	updateInfo := tb.Update(2, "fuga", 33)
-	rm.Update(txn, updateInfo)
-	rm.Commit(txn)
+	recoveryManager.Update(txn, updateInfo)
+	recoveryManager.Commit(txn)
 }
 
 func TestLogSerializeDeSerialize(t *testing.T) {
@@ -68,13 +68,13 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
 	lm := transaction.NewLogMgr(*logfm)
-	rm := transaction.NewRecoveryMgr(lm, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
 	txn := transaction.NewTransaction()
 
-	rm.Begin(txn)
+	recoveryManager.Begin(txn)
 	updateInfo := st.Update(2, "fuga", 33)
-	rm.Update(txn, updateInfo)
-	rm.Commit(txn)
+	recoveryManager.Update(txn, updateInfo)
+	recoveryManager.Commit(txn)
 
 	// test log manager serialize deserialize
 	pg := lm.LogPage
@@ -104,19 +104,19 @@ func TestLogLSN(t *testing.T) {
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
 	lm := transaction.NewLogMgr(*logfm)
-	rm := transaction.NewRecoveryMgr(lm, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
 	txn := transaction.NewTransaction()
 
-	rm.Begin(txn)
+	recoveryManager.Begin(txn)
 	updateInfo := st.Update(2, "fuga", 33)
-	rm.Update(txn, updateInfo)
+	recoveryManager.Update(txn, updateInfo)
 	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
 
 	st.Flush()
 	st = storage.NewStorageFromFile(fm, ptb)
 	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
 
-	rm.Commit(txn)
+	recoveryManager.Commit(txn)
 }
 
 func TestLogLSNConcurrently(t *testing.T) {
@@ -131,25 +131,25 @@ func TestLogLSNConcurrently(t *testing.T) {
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
 	lm := transaction.NewLogMgr(*logfm)
-	rm := transaction.NewRecoveryMgr(lm, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
 
 	txnA := transaction.NewTransaction()
 	txnB := transaction.NewTransaction()
 
-	rm.Begin(txnA)
+	recoveryManager.Begin(txnA)
 	updateInfo := st.Update(2, "fuga", 33)
-	rm.Update(txnA, updateInfo)
+	recoveryManager.Update(txnA, updateInfo)
 
-	rm.Begin(txnB)
+	recoveryManager.Begin(txnB)
 	updateInfo = st.Update(2, "fuga", 3335)
 
 	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
 
-	rm.Update(txnA, updateInfo)
+	recoveryManager.Update(txnA, updateInfo)
 
 	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 4)
-	rm.Abort(txnB)
-	rm.Commit(txnA)
+	recoveryManager.Abort(txnB)
+	recoveryManager.Commit(txnA)
 
 	st.Flush()
 	st = storage.NewStorageFromFile(fm, ptb)
@@ -167,15 +167,15 @@ func TestLogIterator(t *testing.T) {
 	bm := storage.NewBufferMgr(fm)
 	ptb := storage.NewPageTable(bm)
 	lm := transaction.NewLogMgr(*logfm)
-	rm := transaction.NewRecoveryMgr(lm, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
 
 	txnA := transaction.NewTransaction()
 	txnB := transaction.NewTransaction()
 
-	rm.Begin(txnA)
-	rm.Begin(txnB)
-	rm.Abort(txnB)
-	rm.Commit(txnA)
+	recoveryManager.Begin(txnA)
+	recoveryManager.Begin(txnB)
+	recoveryManager.Abort(txnB)
+	recoveryManager.Commit(txnA)
 
 	logIter := transaction.NewLogIter(lm, 0)
 	log, _ := logIter.Next()
@@ -216,24 +216,24 @@ func TestUpdateFromLog(t *testing.T) {
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
 	lm := transaction.NewLogMgr(*logfm)
-	rm := transaction.NewRecoveryMgr(lm, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
 	txn := transaction.NewTransaction()
 
-	rm.Begin(txn)
+	recoveryManager.Begin(txn)
 	updateInfo := st.Update(2, "fuga", 33)
-	rm.Update(txn, updateInfo)
+	recoveryManager.Update(txn, updateInfo)
 
 	updateInfo = st.Update(2, "fuga", 3335)
 	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
 
-	rm.Update(txn, updateInfo)
+	recoveryManager.Update(txn, updateInfo)
 	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 3)
 
 	st.Flush()
 	st = storage.NewStorageFromFile(fm, ptb)
 	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 3)
 
-	rm.Commit(txn)
+	recoveryManager.Commit(txn)
 	st.Select(false)
 }
 
@@ -250,17 +250,17 @@ func TestRedoFromLog(t *testing.T) {
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
 	lm := transaction.NewLogMgr(*logfm)
-	rm := transaction.NewRecoveryMgr(lm, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
 	txn := transaction.NewTransaction()
 
-	rm.Begin(txn)
+	recoveryManager.Begin(txn)
 	updateInfo := st.Update(500, "fuga", 33)
-	rm.Update(txn, updateInfo)
+	recoveryManager.Update(txn, updateInfo)
 
 	updateInfo = st.Update(2, "fuga", 3337)
-	rm.Update(txn, updateInfo)
+	recoveryManager.Update(txn, updateInfo)
 
-	rm.Commit(txn)
+	recoveryManager.Commit(txn)
 
 	res, _ := st.Select(false, "hoge", "fuga")
 	if val := res[1][3]; val.(int32) != 3337 {
@@ -273,7 +273,7 @@ func TestRedoFromLog(t *testing.T) {
 	res, _ = st.Select(false, "hoge", "fuga")
 	assert.EqualInt32(t, res[1][3].(int32), -13)
 	assert.EqualInt32(t, res[1][5].(int32), 5)
-	rm.LogRedo(&st)
+	recoveryManager.LogRedo(&st)
 	res, _ = st.Select(false, "hoge", "fuga")
 	assert.EqualInt32(t, res[1][3].(int32), 3337)
 	assert.EqualInt32(t, res[1][5].(int32), 33)
@@ -290,12 +290,12 @@ func TestRedoFromLogFile(t *testing.T) {
 	ptb := storage.NewPageTable(bm)
 	st := storage.NewStorageFromFile(fm, ptb)
 	lm := transaction.NewLogMgrFromFile(*fm)
-	rm := transaction.NewRecoveryMgr(lm, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(lm, ptb)
 
 	res, _ := st.Select(false, "hoge", "fuga", "piyo")
 	assert.EqualInt32(t, res[1][3].(int32), -13)
 	assert.EqualInt32(t, res[1][5].(int32), 5)
-	rm.LogRedo(&st)
+	recoveryManager.LogRedo(&st)
 	res, _ = st.Select(false, "hoge", "fuga", "piyo")
 	assert.EqualInt32(t, res[1][3].(int32), 4447)
 	assert.EqualInt32(t, res[1][5].(int32), 33)
