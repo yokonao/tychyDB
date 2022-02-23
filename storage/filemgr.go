@@ -23,32 +23,32 @@ type FileMgr struct {
 
 func NewFileMgr() *FileMgr {
 	diskDir := os.Getenv("DISK")
-	fm := &FileMgr{}
-	fm.baseDir = diskDir
-	fm.blockSize = PageSize
-	_, err := os.Stat(fm.baseDir)
-	fm.isNew = err != nil
-	if fm.isNew {
-		os.Mkdir(fm.baseDir, 0777)
+	fileManager := &FileMgr{}
+	fileManager.baseDir = diskDir
+	fileManager.blockSize = PageSize
+	_, err := os.Stat(fileManager.baseDir)
+	fileManager.isNew = err != nil
+	if fileManager.isNew {
+		os.Mkdir(fileManager.baseDir, 0777)
 	}
-	return fm
+	return fileManager
 }
 
-func (fm *FileMgr) Clean() {
-	err := os.RemoveAll(fm.baseDir)
+func (fileManager *FileMgr) Clean() {
+	err := os.RemoveAll(fileManager.baseDir)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (fm *FileMgr) Write(blk BlockId, bytes []byte) {
-	file, err := os.OpenFile(fm.baseDir+blk.fileName, os.O_WRONLY|os.O_CREATE, 0644)
+func (fileManager *FileMgr) Write(blk BlockId, bytes []byte) {
+	file, err := os.OpenFile(fileManager.baseDir+blk.fileName, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
 
-	_, err = file.Seek(int64(blk.BlockNum)*fm.blockSize, 0)
+	_, err = file.Seek(int64(blk.BlockNum)*fileManager.blockSize, 0)
 	if err != nil {
 		panic(err)
 	}
@@ -59,13 +59,13 @@ func (fm *FileMgr) Write(blk BlockId, bytes []byte) {
 	}
 }
 
-func (fm *FileMgr) Read(blk BlockId) (int, []byte) {
-	file, err := os.Open(fm.baseDir + blk.fileName)
+func (fileManager *FileMgr) Read(blk BlockId) (int, []byte) {
+	file, err := os.Open(fileManager.baseDir + blk.fileName)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
-	_, err = file.Seek(int64(blk.BlockNum)*fm.blockSize, 0)
+	_, err = file.Seek(int64(blk.BlockNum)*fileManager.blockSize, 0)
 
 	if err != nil {
 		panic(err)
@@ -82,12 +82,12 @@ func (fm *FileMgr) Read(blk BlockId) (int, []byte) {
 	return n, buf
 }
 
-func (fm *FileMgr) ReadLastBlock(fileName string) (int, int, []byte) {
+func (fileManager *FileMgr) ReadLastBlock(fileName string) (int, int, []byte) {
 	curBlkId := 0
 	lastBuf := make([]byte, PageSize)
 	lastN := 0
 	for {
-		n, buf := fm.Read(NewBlockId(uint32(curBlkId), fileName))
+		n, buf := fileManager.Read(NewBlockId(uint32(curBlkId), fileName))
 		if n == 0 {
 			if curBlkId == 0 {
 				panic(errors.New("cannot get last block"))

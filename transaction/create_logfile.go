@@ -6,13 +6,13 @@ func CreateLogFile() {
 	UniqueTxnId = 0
 	storage.CreateStorage()
 
-	logfm := storage.NewFileMgr()
-	fm := storage.NewFileMgr()
+	logfileManager := storage.NewFileMgr()
+	fileManager := storage.NewFileMgr()
 
-	bm := storage.NewBufferMgr(fm)
+	bm := storage.NewBufferMgr(fileManager)
 	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorageFromFile(fm, ptb)
-	logManager := NewLogMgr(*logfm)
+	st := storage.NewStorageFromFile(fileManager, ptb)
+	logManager := NewLogMgr(*logfileManager)
 	recoveryManager := NewRecoveryMgr(logManager, ptb)
 	/*
 	   | hoge  | fuga  | piyo  |

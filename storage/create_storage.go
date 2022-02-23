@@ -1,11 +1,11 @@
 package storage
 
 func CreateStorage() {
-	fm := NewFileMgr()
-	bm := NewBufferMgr(fm)
+	fileManager := NewFileMgr()
+	bm := NewBufferMgr(fileManager)
 	ptb := NewPageTable(bm)
 
-	st := NewStorage(fm, ptb)
+	st := NewStorage(fileManager, ptb)
 	st.AddColumn("hoge", IntergerType)
 	st.AddColumn("fuga", IntergerType)
 	st.AddColumn("piyo", IntergerType)
@@ -21,11 +21,11 @@ func CreateStorage() {
 }
 
 func CreateStorageWithChar() {
-	fm := NewFileMgr()
-	bm := NewBufferMgr(fm)
+	fileManager := NewFileMgr()
+	bm := NewBufferMgr(fileManager)
 	ptb := NewPageTable(bm)
 
-	st := NewStorage(fm, ptb)
+	st := NewStorage(fileManager, ptb)
 	st.AddColumn("hoge", IntergerType)
 	st.AddColumn("fuga", IntergerType)
 	st.AddColumn("hogefuga", CharType(10))

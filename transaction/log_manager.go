@@ -12,24 +12,24 @@ type LogMgr struct {
 	UniqueLSN     uint32
 	UniquePageNum uint32
 	LogPage       *LogPage // I used UpperCase for testing, but this should be lowerCamelCase.
-	fm            storage.FileMgr
+	fileManager   storage.FileMgr
 	FlashedLSN    uint32
 }
 
-func NewLogMgr(fm storage.FileMgr) *LogMgr {
+func NewLogMgr(fileManager storage.FileMgr) *LogMgr {
 	logMgr := LogMgr{}
 	logMgr.UniqueLSN = 1 // 1-indexed, because flushed lsn is 0
 	logMgr.UniquePageNum = 0
-	logMgr.fm = fm
+	logMgr.fileManager = fileManager
 	logMgr.FlashedLSN = 0
 	logMgr.LogPage = newLogPage(logMgr.getUniquePageNum())
 	return &logMgr
 }
 
-func NewLogMgrFromFile(fm storage.FileMgr) *LogMgr {
+func NewLogMgrFromFile(fileManager storage.FileMgr) *LogMgr {
 	logMgr := LogMgr{}
-	logMgr.fm = fm
-	blk, n, buf := fm.ReadLastBlock(LogFile)
+	logMgr.fileManager = fileManager
+	blk, n, buf := fileManager.ReadLastBlock(LogFile)
 	if n == 0 {
 		panic(errors.New("page is empty"))
 	}
@@ -67,7 +67,7 @@ func (logManager *LogMgr) addLog(txnId TxnId, logType uint32) *Log {
 }
 
 func (logManager *LogMgr) WritePage() {
-	logManager.fm.Write(logManager.LogPage.blk, logManager.LogPage.ToBytes())
+	logManager.fileManager.Write(logManager.LogPage.blk, logManager.LogPage.ToBytes())
 	logManager.FlashedLSN = logManager.LogPage.maxLSN()
 }
 

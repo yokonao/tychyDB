@@ -18,12 +18,12 @@ func ResetBlockId() {
 }
 
 type Storage struct {
-	fm  *FileMgr
-	ptb *PageTable
+	fileManager *FileMgr
+	ptb         *PageTable
 	MetaPage
 }
 
-func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
+func NewStorage(fileManager *FileMgr, ptb *PageTable) Storage {
 	ResetBlockId()
 	st := Storage{}
 	// テーブルのメタ情報を置くためのページ
@@ -33,8 +33,8 @@ func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
 	if metaBlk.BlockNum != 0 {
 		panic(errors.New("place a meta page at the top of the file"))
 	}
-	st.fm = fm
-	st.fm.Write(metaBlk, st.MetaPage.toBytes())
+	st.fileManager = fileManager
+	st.fileManager.Write(metaBlk, st.MetaPage.toBytes())
 
 	st.ptb = ptb
 	// rootノード
@@ -45,25 +45,25 @@ func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
 	return st
 }
 
-func NewStorageFromFile(fm *FileMgr, ptb *PageTable) Storage {
+func NewStorageFromFile(fileManager *FileMgr, ptb *PageTable) Storage {
 	ResetBlockId()
 	st := Storage{}
-	st.fm = fm
+	st.fileManager = fileManager
 	st.ptb = ptb
 	blk := newUniqueBlockId(StorageFile)
-	_, bytes := fm.Read(blk)
+	_, bytes := fileManager.Read(blk)
 	st.MetaPage = newMetaPageFromBytes(bytes)
 	return st
 }
 
 func (st *Storage) Flush() {
 	st.ptb.Flush()
-	st.fm.Write(st.metaBlk, st.MetaPage.toBytes())
+	st.fileManager.Write(st.metaBlk, st.MetaPage.toBytes())
 }
 
 func (st *Storage) Clear() {
 	st.ptb.ClearBuffer()
-	_, bytes := st.fm.Read(NewBlockId(0, StorageFile))
+	_, bytes := st.fileManager.Read(NewBlockId(0, StorageFile))
 	st.MetaPage = newMetaPageFromBytes(bytes)
 }
 
