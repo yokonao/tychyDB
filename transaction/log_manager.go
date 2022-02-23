@@ -60,7 +60,7 @@ func (lm *LogMgr) getUniquePageNum() uint32 {
 	return res
 }
 
-func (lm *LogMgr) addLog(txnId, logType uint32) *Log {
+func (lm *LogMgr) addLog(txnId TxnId, logType uint32) *Log {
 	log := newUniqueLog(lm.getUniqueLSN(), txnId, logType)
 	lm.LogPage.addLog(log)
 	return log

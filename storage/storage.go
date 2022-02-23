@@ -24,6 +24,7 @@ type Storage struct {
 }
 
 func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
+	ResetBlockId()
 	st := Storage{}
 	// テーブルのメタ情報を置くためのページ
 
@@ -45,14 +46,11 @@ func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
 }
 
 func NewStorageFromFile(fm *FileMgr, ptb *PageTable) Storage {
+	ResetBlockId()
 	st := Storage{}
 	st.fm = fm
 	st.ptb = ptb
-
 	blk := newUniqueBlockId(StorageFile)
-	if blk.BlockNum != 0 {
-		panic(errors.New("expect 0"))
-	}
 	_, bytes := fm.Read(blk)
 	st.MetaPage = newMetaPageFromBytes(bytes)
 	return st

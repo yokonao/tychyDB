@@ -35,7 +35,10 @@ func NewFileMgr() *FileMgr {
 }
 
 func (fm *FileMgr) Clean() {
-	os.Remove(fm.baseDir)
+	err := os.RemoveAll(fm.baseDir)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (fm *FileMgr) Write(blk BlockId, bytes []byte) {

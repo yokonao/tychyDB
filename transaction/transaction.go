@@ -1,19 +1,29 @@
 package transaction
 
-var UniqueTxnId uint32
+type TxnId uint32
+
+var UniqueTxnId TxnId
+
+type TxnStatus uint32
+
+const (
+	TXN_INPROGRESS TxnStatus = iota
+	TXN_ABORTED
+	TXN_COMMITED
+)
 
 func init() {
 	UniqueTxnId = 0
 }
 
-func getUniqueTxnId() uint32 {
+func getUniqueTxnId() TxnId {
 	res := UniqueTxnId
 	UniqueTxnId++
 	return res
 }
 
 type Transaction struct {
-	txnId uint32
+	txnId TxnId
 }
 
 func NewTransaction() *Transaction {

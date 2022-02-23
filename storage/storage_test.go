@@ -9,7 +9,6 @@ import (
 )
 
 func TestStorageEasy(t *testing.T) {
-	storage.ResetBlockId()
 	fm := storage.NewFileMgr()
 	defer fm.Clean()
 
@@ -27,8 +26,6 @@ func TestStorageEasy(t *testing.T) {
 	st.Add(-345, 77, 43)
 }
 func TestStorage(t *testing.T) {
-	storage.ResetBlockId()
-
 	fm := storage.NewFileMgr()
 	defer fm.Clean()
 
@@ -82,7 +79,6 @@ func TestStorage(t *testing.T) {
 }
 
 func TestStorageChar(t *testing.T) {
-	storage.ResetBlockId()
 	fm := storage.NewFileMgr()
 	defer fm.Clean()
 
