@@ -313,6 +313,11 @@ func TestRedoFromLogFile(t *testing.T) {
 	lm := transaction.NewLogMgrFromFile(*fm)
 	rm := transaction.NewRecoveryMgr(lm, ptb)
 
+	res, _ := st.Select(true, "hoge", "fuga", "piyo")
+	assert.EqualInt32(t, res[1][3].(int32), -13)
+	assert.EqualInt32(t, res[1][5].(int32), 5)
 	rm.LogRedo(&st)
-	_, _ = st.Select(true, "hoge", "fuga")
+	res, _ = st.Select(true, "hoge", "fuga", "piyo")
+	assert.EqualInt32(t, res[1][3].(int32), 4447)
+	assert.EqualInt32(t, res[1][5].(int32), 33)
 }

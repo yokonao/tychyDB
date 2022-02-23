@@ -35,10 +35,32 @@ func (rm *RecoveryMgr) Update(txn *Transaction, updateInfo storage.UpdateInfo) {
 }
 
 func (rm *RecoveryMgr) LogRedo(st *storage.Storage) {
-	// redoPool := map[uint32]bool{}
-	// txnTable := map[uint32]TxnStatus{}
-
+	redoPool := map[TxnId]bool{}
+	txnTable := map[TxnId]TxnStatus{}
+	// log file full scan
 	logIter := NewLogIter(rm.lm, 0)
+	for !logIter.IsEnd() {
+		log, err := logIter.Next()
+		if err != nil {
+			panic(ErrOutOfBounds)
+		}
+		switch log.logType {
+		case BEGIN:
+			// todo check if exists
+			txnTable[log.txnId] = TXN_INPROGRESS
+		case COMMIT:
+			txnTable[log.txnId] = TXN_COMMITED
+			redoPool[log.txnId] = true
+		case ABORT:
+			txnTable[log.txnId] = TXN_ABORTED
+		case UPDATE:
+			continue
+		}
+
+	}
+
+	// redo if txn is valid
+	logIter = NewLogIter(rm.lm, 0)
 	for !logIter.IsEnd() {
 		log, err := logIter.Next()
 		if err != nil {
@@ -49,7 +71,11 @@ func (rm *RecoveryMgr) LogRedo(st *storage.Storage) {
 		case BEGIN, COMMIT, ABORT:
 			continue
 		case UPDATE:
-			st.UpdateFromInfo(&log.updateInfo)
+			if redoPool[log.txnId] {
+				st.UpdateFromInfo(&log.updateInfo)
+			}
+		default:
+			panic(ErrNotImplemented)
 		}
 	}
 	st.Flush()
