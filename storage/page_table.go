@@ -11,138 +11,138 @@ import (
 // that are currently in memory.
 // Also maintains additional meta-data per page
 type PageTable struct {
-	bm       *BufferMgr
-	numOfPin int
-	table    map[int]int
-	queue    algorithm.Queue
+	bufferManager *BufferMgr
+	numOfPin      int
+	table         map[int]int
+	queue         algorithm.Queue
 }
 
-func NewPageTable(bm *BufferMgr) *PageTable {
-	ptb := &PageTable{}
-	ptb.bm = bm
-	ptb.numOfPin = 0
-	ptb.table = make(map[int]int)
-	ptb.queue = algorithm.NewQueue(64)
-	return ptb
+func NewPageTable(bufferManager *BufferMgr) *PageTable {
+	pageTable := &PageTable{}
+	pageTable.bufferManager = bufferManager
+	pageTable.numOfPin = 0
+	pageTable.table = make(map[int]int)
+	pageTable.queue = algorithm.NewQueue(64)
+	return pageTable
 }
 
-func (ptb *PageTable) ClearBuffer() {
+func (pageTable *PageTable) ClearBuffer() {
 	// for testing
 	for {
-		if ptb.queue.IsEmpty() {
+		if pageTable.queue.IsEmpty() {
 			break
 		}
-		curBlkNum := ptb.queue.Pop()
-		curBuffId := ptb.table[int(curBlkNum)]
-		delete(ptb.table, int(curBlkNum))
-		ptb.bm.clear(curBuffId)
+		curBlkNum := pageTable.queue.Pop()
+		curBuffId := pageTable.table[int(curBlkNum)]
+		delete(pageTable.table, int(curBlkNum))
+		pageTable.bufferManager.clear(curBuffId)
 	}
-	ptb.numOfPin = 0
+	pageTable.numOfPin = 0
 }
 
-func (ptb *PageTable) Flush() {
+func (pageTable *PageTable) Flush() {
 	for {
-		if ptb.queue.IsEmpty() {
+		if pageTable.queue.IsEmpty() {
 			break
 		}
-		curBlkNum := ptb.queue.Pop()
-		curBuffId := ptb.table[int(curBlkNum)]
-		delete(ptb.table, int(curBlkNum))
-		ptb.bm.flush(curBuffId)
+		curBlkNum := pageTable.queue.Pop()
+		curBuffId := pageTable.table[int(curBlkNum)]
+		delete(pageTable.table, int(curBlkNum))
+		pageTable.bufferManager.flush(curBuffId)
 	}
-	ptb.numOfPin = 0
+	pageTable.numOfPin = 0
 }
 
-func (ptb *PageTable) makeSpace() {
-	if len(ptb.table) > MaxBufferPoolSize {
+func (pageTable *PageTable) makeSpace() {
+	if len(pageTable.table) > MaxBufferPoolSize {
 		panic(errors.New("unexpected"))
-	} else if len(ptb.table) < MaxBufferPoolSize {
+	} else if len(pageTable.table) < MaxBufferPoolSize {
 		return
 	}
-	if !ptb.available() {
+	if !pageTable.available() {
 		// TODO unpinされるまで待つ実装でいつか置き換える
 		panic(errors.New("no space in buffer pool"))
 	}
 	for {
-		dropBlkNum := ptb.queue.Pop()
-		dropBuffId := ptb.table[int(dropBlkNum)]
-		if ptb.bm.isPinned(dropBuffId) {
-			ptb.queue.Push(dropBlkNum)
+		dropBlkNum := pageTable.queue.Pop()
+		dropBuffId := pageTable.table[int(dropBlkNum)]
+		if pageTable.bufferManager.isPinned(dropBuffId) {
+			pageTable.queue.Push(dropBlkNum)
 		} else {
-			if ptb.bm.isRefed(dropBuffId) {
-				ptb.bm.unRef(dropBuffId)
-				ptb.queue.Push(dropBlkNum)
+			if pageTable.bufferManager.isRefed(dropBuffId) {
+				pageTable.bufferManager.unRef(dropBuffId)
+				pageTable.queue.Push(dropBlkNum)
 			} else {
-				delete(ptb.table, int(dropBlkNum))
-				ptb.bm.flush(dropBuffId)
+				delete(pageTable.table, int(dropBlkNum))
+				pageTable.bufferManager.flush(dropBuffId)
 				break
 			}
 		}
 	}
 }
 
-func (ptb *PageTable) getBuffId(blk BlockId) int {
-	buffId, exists := ptb.table[int(blk.BlockNum)]
+func (pageTable *PageTable) getBuffId(blk BlockId) int {
+	buffId, exists := pageTable.table[int(blk.BlockNum)]
 	if exists {
 		return buffId
 	} else {
-		ptb.makeSpace()
-		ptb.queue.Push(int(blk.BlockNum))
-		buffId := ptb.bm.load(blk)
-		ptb.table[int(blk.BlockNum)] = buffId
+		pageTable.makeSpace()
+		pageTable.queue.Push(int(blk.BlockNum))
+		buffId := pageTable.bufferManager.load(blk)
+		pageTable.table[int(blk.BlockNum)] = buffId
 		return buffId
 	}
 }
 
-func (ptb *PageTable) available() bool {
-	return ptb.numOfPin != MaxBufferPoolSize
+func (pageTable *PageTable) available() bool {
+	return pageTable.numOfPin != MaxBufferPoolSize
 }
 
-func (ptb *PageTable) set(blk BlockId, pg *Page) {
-	ptb.makeSpace()
-	ptb.queue.Push(int(blk.BlockNum))
+func (pageTable *PageTable) set(blk BlockId, pg *Page) {
+	pageTable.makeSpace()
+	pageTable.queue.Push(int(blk.BlockNum))
 	buff := newBufferFromPage(blk, pg)
-	buffId := ptb.bm.allocate(buff)
-	ptb.table[int(blk.BlockNum)] = buffId
+	buffId := pageTable.bufferManager.allocate(buff)
+	pageTable.table[int(blk.BlockNum)] = buffId
 }
 
-func (ptb *PageTable) read(blk BlockId) *Page {
-	return ptb.bm.pageAt(ptb.getBuffId(blk))
+func (pageTable *PageTable) read(blk BlockId) *Page {
+	return pageTable.bufferManager.pageAt(pageTable.getBuffId(blk))
 }
 
-func (ptb *PageTable) pin(blk BlockId) *Page {
-	buffId := ptb.getBuffId(blk)
-	ptb.bm.pin(buffId)
-	ptb.numOfPin++
-	return ptb.bm.pageAt(buffId)
+func (pageTable *PageTable) pin(blk BlockId) *Page {
+	buffId := pageTable.getBuffId(blk)
+	pageTable.bufferManager.pin(buffId)
+	pageTable.numOfPin++
+	return pageTable.bufferManager.pageAt(buffId)
 }
 
-func (ptb *PageTable) unpin(blk BlockId) {
-	buffId, exists := ptb.table[int(blk.BlockNum)]
+func (pageTable *PageTable) unpin(blk BlockId) {
+	buffId, exists := pageTable.table[int(blk.BlockNum)]
 	if !exists {
 		panic(errors.New("trying to unpin page not on disk"))
 	}
-	ptb.bm.unpin(buffId)
-	ptb.numOfPin--
+	pageTable.bufferManager.unpin(buffId)
+	pageTable.numOfPin--
 }
 
-func (ptb *PageTable) GetPageLSN(blk BlockId) uint32 {
-	buffId := ptb.getBuffId(blk)
-	return ptb.bm.pageAt(buffId).header.pageLSN
+func (pageTable *PageTable) GetPageLSN(blk BlockId) uint32 {
+	buffId := pageTable.getBuffId(blk)
+	return pageTable.bufferManager.pageAt(buffId).header.pageLSN
 }
 
-func (ptb *PageTable) SetPageLSN(blk BlockId, lsn uint32) {
-	buffId := ptb.getBuffId(blk)
-	ptb.bm.pageAt(buffId).header.pageLSN = lsn
+func (pageTable *PageTable) SetPageLSN(blk BlockId, lsn uint32) {
+	buffId := pageTable.getBuffId(blk)
+	pageTable.bufferManager.pageAt(buffId).header.pageLSN = lsn
 }
 
-func (ptb *PageTable) Print() {
+func (pageTable *PageTable) Print() {
 	fmt.Printf("Print Page table {\n")
-	fmt.Printf("table %v\n", ptb.table)
+	fmt.Printf("table %v\n", pageTable.table)
 	fmt.Printf("queue [ ")
-	ptb.queue.Print()
+	pageTable.queue.Print()
 	fmt.Printf(" ]\n")
-	fmt.Printf("NumOfPins {%d}\n", ptb.numOfPin)
-	ptb.bm.Print()
+	fmt.Printf("NumOfPins {%d}\n", pageTable.numOfPin)
+	pageTable.bufferManager.Print()
 	fmt.Printf("}\n")
 }

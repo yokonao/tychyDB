@@ -12,9 +12,9 @@ func TestStorageEasy(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorage(fileManager, ptb)
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorage(fileManager, pageTable)
 	st.AddColumn("hoge", storage.IntergerType)
 	st.AddColumn("fuga", storage.IntergerType)
 	st.AddColumn("piyo", storage.IntergerType)
@@ -29,9 +29,9 @@ func TestStorage(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorage(fileManager, ptb)
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorage(fileManager, pageTable)
 	st.AddColumn("hoge", storage.IntergerType)
 	st.AddColumn("fuga", storage.IntergerType)
 	st.AddColumn("piyo", storage.IntergerType)
@@ -82,9 +82,9 @@ func TestStorageChar(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	countryTable := storage.NewStorage(fileManager, ptb)
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	countryTable := storage.NewStorage(fileManager, pageTable)
 	countryTable.AddColumn("name", storage.CharType(13))
 	countryTable.AddColumn("continent", storage.CharType(15))
 	countryTable.Add("Japan", "Asia")
@@ -134,9 +134,9 @@ func TestStorageMixed(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorageFromFile(fileManager, ptb)
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorageFromFile(fileManager, pageTable)
 	_, err := st.Select(false, "hoge", "fuga", "piyo", "hogefuga", "fuga")
 	if err != nil {
 		t.Error("failure select")
@@ -149,9 +149,9 @@ func TestStorageRestore(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorageFromFile(fileManager, ptb)
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorageFromFile(fileManager, pageTable)
 
 	res, err := st.Select(false, "hoge", "fuga", "piyo", "fuga")
 	if err != nil {
@@ -194,9 +194,9 @@ func TestUpdate(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorageFromFile(fileManager, ptb) // hogeがプライマリー
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorageFromFile(fileManager, pageTable) // hogeがプライマリー
 
 	st.Update(2, "fuga", 33)
 	st.Update(10, "fuga", 44)
@@ -241,9 +241,9 @@ func TestUpdateIdempotent(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorageFromFile(fileManager, ptb) // hogeがプライマリー
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorageFromFile(fileManager, pageTable) // hogeがプライマリー
 
 	st.Update(2, "fuga", 33)
 	st.Update(2, "fuga", 33)
@@ -290,9 +290,9 @@ func TestUpdateFromInfo(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorageFromFile(fileManager, ptb) // hogeがプライマリー
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorageFromFile(fileManager, pageTable) // hogeがプライマリー
 
 	ui := st.Update(10, "fuga", 44)
 	gen := util.NewGenStruct(0, uint32(len(ui.To)))
@@ -314,9 +314,9 @@ func TestUpdateFromInfoMixed(t *testing.T) {
 
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorageFromFile(fileManager, ptb) // hogeがプライマリー
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorageFromFile(fileManager, pageTable) // hogeがプライマリー
 
 	ui := st.Update(10, "fuga", 44)
 	gen := util.NewGenStruct(0, uint32(len(ui.To)))

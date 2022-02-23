@@ -18,9 +18,9 @@ func cleanDisk(t *testing.T) {
 func createStorage(t *testing.T) {
 	cleanDisk(t)
 	fileManager := storage.NewFileMgr()
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorage(fileManager, ptb)
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorage(fileManager, pageTable)
 	st.AddColumn("hoge", storage.IntergerType)
 	st.AddColumn("fuga", storage.IntergerType)
 	st.AddColumn("piyo", storage.IntergerType)
@@ -43,11 +43,11 @@ func TestTxn(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	tb := storage.NewStorageFromFile(fileManager, ptb)
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	tb := storage.NewStorageFromFile(fileManager, pageTable)
 	logManager := transaction.NewLogMgr(*logfileManager)
-	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, pageTable)
 
 	txn := transaction.NewTransaction()
 	recoveryManager.Begin(txn)
@@ -64,11 +64,11 @@ func TestLogSerializeDeSerialize(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorageFromFile(fileManager, ptb)
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorageFromFile(fileManager, pageTable)
 	logManager := transaction.NewLogMgr(*logfileManager)
-	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, pageTable)
 	txn := transaction.NewTransaction()
 
 	recoveryManager.Begin(txn)
@@ -100,21 +100,21 @@ func TestLogLSN(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorageFromFile(fileManager, ptb)
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorageFromFile(fileManager, pageTable)
 	logManager := transaction.NewLogMgr(*logfileManager)
-	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, pageTable)
 	txn := transaction.NewTransaction()
 
 	recoveryManager.Begin(txn)
 	updateInfo := st.Update(2, "fuga", 33)
 	recoveryManager.Update(txn, updateInfo)
-	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
+	assert.EqualUInt32(t, pageTable.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
 
 	st.Flush()
-	st = storage.NewStorageFromFile(fileManager, ptb)
-	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
+	st = storage.NewStorageFromFile(fileManager, pageTable)
+	assert.EqualUInt32(t, pageTable.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
 
 	recoveryManager.Commit(txn)
 }
@@ -127,11 +127,11 @@ func TestLogLSNConcurrently(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorageFromFile(fileManager, ptb)
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorageFromFile(fileManager, pageTable)
 	logManager := transaction.NewLogMgr(*logfileManager)
-	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, pageTable)
 
 	txnA := transaction.NewTransaction()
 	txnB := transaction.NewTransaction()
@@ -143,17 +143,17 @@ func TestLogLSNConcurrently(t *testing.T) {
 	recoveryManager.Begin(txnB)
 	updateInfo = st.Update(2, "fuga", 3335)
 
-	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
+	assert.EqualUInt32(t, pageTable.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
 
 	recoveryManager.Update(txnA, updateInfo)
 
-	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 4)
+	assert.EqualUInt32(t, pageTable.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 4)
 	recoveryManager.Abort(txnB)
 	recoveryManager.Commit(txnA)
 
 	st.Flush()
-	st = storage.NewStorageFromFile(fileManager, ptb)
-	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 4)
+	st = storage.NewStorageFromFile(fileManager, pageTable)
+	assert.EqualUInt32(t, pageTable.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 4)
 }
 
 func TestLogIterator(t *testing.T) {
@@ -164,10 +164,10 @@ func TestLogIterator(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
 	logManager := transaction.NewLogMgr(*logfileManager)
-	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, pageTable)
 
 	txnA := transaction.NewTransaction()
 	txnB := transaction.NewTransaction()
@@ -212,11 +212,11 @@ func TestUpdateFromLog(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorageFromFile(fileManager, ptb)
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorageFromFile(fileManager, pageTable)
 	logManager := transaction.NewLogMgr(*logfileManager)
-	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, pageTable)
 	txn := transaction.NewTransaction()
 
 	recoveryManager.Begin(txn)
@@ -224,14 +224,14 @@ func TestUpdateFromLog(t *testing.T) {
 	recoveryManager.Update(txn, updateInfo)
 
 	updateInfo = st.Update(2, "fuga", 3335)
-	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
+	assert.EqualUInt32(t, pageTable.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
 
 	recoveryManager.Update(txn, updateInfo)
-	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 3)
+	assert.EqualUInt32(t, pageTable.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 3)
 
 	st.Flush()
-	st = storage.NewStorageFromFile(fileManager, ptb)
-	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 3)
+	st = storage.NewStorageFromFile(fileManager, pageTable)
+	assert.EqualUInt32(t, pageTable.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 3)
 
 	recoveryManager.Commit(txn)
 	st.Select(false)
@@ -246,11 +246,11 @@ func TestRedoFromLog(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorageFromFile(fileManager, ptb)
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorageFromFile(fileManager, pageTable)
 	logManager := transaction.NewLogMgr(*logfileManager)
-	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, pageTable)
 	txn := transaction.NewTransaction()
 
 	recoveryManager.Begin(txn)
@@ -286,11 +286,11 @@ func TestRedoFromLogFile(t *testing.T) {
 	fileManager := storage.NewFileMgr()
 	defer fileManager.Clean()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorageFromFile(fileManager, ptb)
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorageFromFile(fileManager, pageTable)
 	logManager := transaction.NewLogMgrFromFile(*fileManager)
-	recoveryManager := transaction.NewRecoveryMgr(logManager, ptb)
+	recoveryManager := transaction.NewRecoveryMgr(logManager, pageTable)
 
 	res, _ := st.Select(false, "hoge", "fuga", "piyo")
 	assert.EqualInt32(t, res[1][3].(int32), -13)

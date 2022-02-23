@@ -130,7 +130,7 @@ func (pg *Page) needSplit() bool {
 	}
 }
 
-func (pg *Page) addRecordRec(ptb *PageTable, rec Record) (splitted bool, splitKey int32, leftPageIndex uint32) {
+func (pg *Page) addRecordRec(pageTable *PageTable, rec Record) (splitted bool, splitKey int32, leftPageIndex uint32) {
 	key := rec.getKey()
 	insert_idx := pg.locateLocally(key)
 	if pg.header.isLeaf {
@@ -151,7 +151,7 @@ func (pg *Page) addRecordRec(ptb *PageTable, rec Record) (splitted bool, splitKe
 		}
 		blk := NewBlockId(pageIndex, StorageFile)
 
-		splitted, splitKey, leftPageIndex := ptb.pin(blk).addRecordRec(ptb, rec)
+		splitted, splitKey, leftPageIndex := pageTable.pin(blk).addRecordRec(pageTable, rec)
 		if splitted {
 			if insert_idx == pg.header.numOfPtr {
 				// locatelocallyがrightmost ptrを返す時には
@@ -161,9 +161,9 @@ func (pg *Page) addRecordRec(ptb *PageTable, rec Record) (splitted bool, splitKe
 			pg.ptrs = insertInt(int(insert_idx), uint32(len(pg.cells)), pg.ptrs)
 			pg.cells = append(pg.cells, KeyCell{key: splitKey, pageIndex: leftPageIndex})
 			pg.header.numOfPtr++
-			ptb.unpin(NewBlockId(leftPageIndex, StorageFile))
+			pageTable.unpin(NewBlockId(leftPageIndex, StorageFile))
 		}
-		ptb.unpin(blk)
+		pageTable.unpin(blk)
 	}
 
 	if pg.needSplit() {
@@ -176,8 +176,8 @@ func (pg *Page) addRecordRec(ptb *PageTable, rec Record) (splitted bool, splitKe
 		}
 		leftPage := newPage(pg.header.isLeaf)
 		blk := newUniqueBlockId(StorageFile)
-		ptb.set(blk, leftPage)
-		ptb.pin(blk)
+		pageTable.set(blk, leftPage)
+		pageTable.pin(blk)
 		leftPageIndex = blk.BlockNum
 		leftPage.ptrs = make([]uint32, splitIndex)
 		leftPage.cells = make([]Cell, splitIndex)

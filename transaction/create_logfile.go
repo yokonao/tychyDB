@@ -9,11 +9,11 @@ func CreateLogFile() {
 	logfileManager := storage.NewFileMgr()
 	fileManager := storage.NewFileMgr()
 
-	bm := storage.NewBufferMgr(fileManager)
-	ptb := storage.NewPageTable(bm)
-	st := storage.NewStorageFromFile(fileManager, ptb)
+	bufferManager := storage.NewBufferMgr(fileManager)
+	pageTable := storage.NewPageTable(bufferManager)
+	st := storage.NewStorageFromFile(fileManager, pageTable)
 	logManager := NewLogMgr(*logfileManager)
-	recoveryManager := NewRecoveryMgr(logManager, ptb)
+	recoveryManager := NewRecoveryMgr(logManager, pageTable)
 	/*
 	   | hoge  | fuga  | piyo  |
 	   | --    | --    | --    |

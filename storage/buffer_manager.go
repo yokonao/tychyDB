@@ -45,28 +45,28 @@ type BufferMgr struct {
 }
 
 func NewBufferMgr(fileManager *FileMgr) *BufferMgr {
-	bm := &BufferMgr{}
-	bm.fileManager = fileManager
-	bm.pool = make([]*Buffer, MaxBufferPoolSize)
-	return bm
+	bufferManager := &BufferMgr{}
+	bufferManager.fileManager = fileManager
+	bufferManager.pool = make([]*Buffer, MaxBufferPoolSize)
+	return bufferManager
 }
 
-func (bm *BufferMgr) pageAt(buffId int) *Page {
-	return bm.pool[buffId].page()
+func (bufferManager *BufferMgr) pageAt(buffId int) *Page {
+	return bufferManager.pool[buffId].page()
 }
 
-func (bm *BufferMgr) allocate(buff *Buffer) int {
+func (bufferManager *BufferMgr) allocate(buff *Buffer) int {
 	for i := 0; i < MaxBufferPoolSize; i++ {
-		if bm.pool[i] == nil {
-			bm.pool[i] = buff
+		if bufferManager.pool[i] == nil {
+			bufferManager.pool[i] = buff
 			return i
 		}
 	}
 	panic(errors.New("no space for page"))
 }
 
-func (bm *BufferMgr) load(blk BlockId) int {
-	n, bytes := bm.fileManager.Read(blk)
+func (bufferManager *BufferMgr) load(blk BlockId) int {
+	n, bytes := bufferManager.fileManager.Read(blk)
 	if n == 0 {
 		panic(errors.New("invalid BlockId was selected"))
 	}
@@ -74,56 +74,56 @@ func (bm *BufferMgr) load(blk BlockId) int {
 	pg := newPageFromBytes(bytes)
 	buff := newBufferFromPage(blk, pg)
 	for i := 0; i < MaxBufferPoolSize; i++ {
-		if bm.pool[i] == nil {
-			bm.pool[i] = buff
+		if bufferManager.pool[i] == nil {
+			bufferManager.pool[i] = buff
 			return i
 		}
 	}
 	panic(errors.New("no space for page"))
 }
 
-func (bm *BufferMgr) flush(buffId int) {
-	buff := bm.pool[buffId]
-	bm.fileManager.Write(buff.blk, buff.page().toBytes())
-	bm.pool[buffId] = nil
+func (bufferManager *BufferMgr) flush(buffId int) {
+	buff := bufferManager.pool[buffId]
+	bufferManager.fileManager.Write(buff.blk, buff.page().toBytes())
+	bufferManager.pool[buffId] = nil
 }
 
-func (bm *BufferMgr) isPinned(buffId int) bool {
-	buff := bm.pool[buffId]
+func (bufferManager *BufferMgr) isPinned(buffId int) bool {
+	buff := bufferManager.pool[buffId]
 	return buff.pin
 }
 
-func (bm *BufferMgr) pin(buffId int) {
-	buff := bm.pool[buffId]
+func (bufferManager *BufferMgr) pin(buffId int) {
+	buff := bufferManager.pool[buffId]
 	buff.pin = true
 	buff.ref = true
 }
 
-func (bm *BufferMgr) unpin(buffId int) {
-	buff := bm.pool[buffId]
+func (bufferManager *BufferMgr) unpin(buffId int) {
+	buff := bufferManager.pool[buffId]
 	if !buff.pin {
 		panic(errors.New("pin is already unpinned"))
 	}
 	buff.pin = false
 }
 
-func (bm *BufferMgr) isRefed(buffId int) bool {
-	buff := bm.pool[buffId]
+func (bufferManager *BufferMgr) isRefed(buffId int) bool {
+	buff := bufferManager.pool[buffId]
 	return buff.ref
 }
 
-func (bm *BufferMgr) unRef(buffId int) {
-	buff := bm.pool[buffId]
+func (bufferManager *BufferMgr) unRef(buffId int) {
+	buff := bufferManager.pool[buffId]
 	buff.ref = false
 }
 
-func (bm *BufferMgr) clear(buffId int) {
-	bm.pool[buffId] = nil
+func (bufferManager *BufferMgr) clear(buffId int) {
+	bufferManager.pool[buffId] = nil
 }
 
-func (bm *BufferMgr) Print() {
+func (bufferManager *BufferMgr) Print() {
 	fmt.Printf("Print BufferMgr [\n")
-	for i, p := range bm.pool {
+	for i, p := range bufferManager.pool {
 		if i != 0 {
 			fmt.Printf(", ")
 		}
@@ -132,7 +132,7 @@ func (bm *BufferMgr) Print() {
 		} else {
 			p.Print()
 		}
-		if i != len(bm.pool)-1 {
+		if i != len(bufferManager.pool)-1 {
 			fmt.Printf("\n")
 		}
 	}

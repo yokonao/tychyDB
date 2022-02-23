@@ -6,13 +6,13 @@ import (
 
 type RecoveryMgr struct {
 	logManager *LogMgr
-	ptb        *storage.PageTable
+	pageTable  *storage.PageTable
 }
 
-func NewRecoveryMgr(logManager *LogMgr, ptb *storage.PageTable) *RecoveryMgr {
+func NewRecoveryMgr(logManager *LogMgr, pageTable *storage.PageTable) *RecoveryMgr {
 	recoveryManager := &RecoveryMgr{}
 	recoveryManager.logManager = logManager
-	recoveryManager.ptb = ptb
+	recoveryManager.pageTable = pageTable
 	return recoveryManager
 }
 
@@ -31,7 +31,7 @@ func (recoveryManager *RecoveryMgr) Abort(txn *Transaction) {
 func (recoveryManager *RecoveryMgr) Update(txn *Transaction, updateInfo storage.UpdateInfo) {
 	log := recoveryManager.logManager.addLog(txn.txnId, UPDATE)
 	log.addUpdateInfo(updateInfo)
-	recoveryManager.ptb.SetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile), log.lsn)
+	recoveryManager.pageTable.SetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile), log.lsn)
 }
 
 func (recoveryManager *RecoveryMgr) LogRedo(st *storage.Storage) {
