@@ -18,12 +18,12 @@ func ResetBlockId() {
 }
 
 type Storage struct {
-	fm  *FileMgr
-	ptb *PageTable
+	fileManager *FileMgr
+	pageTable   *PageTable
 	MetaPage
 }
 
-func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
+func NewStorage(fileManager *FileMgr, pageTable *PageTable) Storage {
 	ResetBlockId()
 	st := Storage{}
 	// テーブルのメタ情報を置くためのページ
@@ -33,60 +33,60 @@ func NewStorage(fm *FileMgr, ptb *PageTable) Storage {
 	if metaBlk.BlockNum != 0 {
 		panic(errors.New("place a meta page at the top of the file"))
 	}
-	st.fm = fm
-	st.fm.Write(metaBlk, st.MetaPage.toBytes())
+	st.fileManager = fileManager
+	st.fileManager.Write(metaBlk, st.MetaPage.toBytes())
 
-	st.ptb = ptb
+	st.pageTable = pageTable
 	// rootノード
 	root := newPage(false)
 	st.rootBlk = newUniqueBlockId(StorageFile)
-	ptb.set(st.rootBlk, root)
+	pageTable.set(st.rootBlk, root)
 	st.cols = []Column{}
 	return st
 }
 
-func NewStorageFromFile(fm *FileMgr, ptb *PageTable) Storage {
+func NewStorageFromFile(fileManager *FileMgr, pageTable *PageTable) Storage {
 	ResetBlockId()
 	st := Storage{}
-	st.fm = fm
-	st.ptb = ptb
+	st.fileManager = fileManager
+	st.pageTable = pageTable
 	blk := newUniqueBlockId(StorageFile)
-	_, bytes := fm.Read(blk)
+	_, bytes := fileManager.Read(blk)
 	st.MetaPage = newMetaPageFromBytes(bytes)
 	return st
 }
 
 func (st *Storage) Flush() {
-	st.ptb.Flush()
-	st.fm.Write(st.metaBlk, st.MetaPage.toBytes())
+	st.pageTable.Flush()
+	st.fileManager.Write(st.metaBlk, st.MetaPage.toBytes())
 }
 
 func (st *Storage) Clear() {
-	st.ptb.ClearBuffer()
-	_, bytes := st.fm.Read(NewBlockId(0, StorageFile))
+	st.pageTable.ClearBuffer()
+	_, bytes := st.fileManager.Read(NewBlockId(0, StorageFile))
 	st.MetaPage = newMetaPageFromBytes(bytes)
 }
 
 func (st *Storage) addRecord(rec Record) {
-	rootPage := st.ptb.pin(st.rootBlk)
+	rootPage := st.pageTable.pin(st.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		pg := newPage(true)
 		blk := newUniqueBlockId(StorageFile)
-		st.ptb.set(blk, pg)
+		st.pageTable.set(blk, pg)
 		rootPage.cells = append(rootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: blk.BlockNum})
 		rootPage.header.rightmostPtr = 0
 		rootPage.header.numOfPtr++
 		pg.ptrs = append(pg.ptrs, 0)
 		pg.cells = append(pg.cells, KeyValueCell{key: rec.getKey(), rec: rec})
 		pg.header.numOfPtr++
-		st.ptb.unpin(st.rootBlk)
+		st.pageTable.unpin(st.rootBlk)
 	} else {
-		splitted, splitKey, leftPageIndex := rootPage.addRecordRec(st.ptb, rec)
+		splitted, splitKey, leftPageIndex := rootPage.addRecordRec(st.pageTable, rec)
 		if splitted {
 			newRootPage := newPage(false)
 			blk := newUniqueBlockId(StorageFile)
-			st.ptb.set(blk, newRootPage)
-			st.ptb.pin(blk)
+			st.pageTable.set(blk, newRootPage)
+			st.pageTable.pin(blk)
 			newRootPage.header.rightmostPtr = 0
 			newRootPage.ptrs = append(newRootPage.ptrs, 1)
 			newRootPage.cells = append(newRootPage.cells, KeyCell{key: math.MaxInt32, pageIndex: st.rootBlk.BlockNum})
@@ -94,7 +94,7 @@ func (st *Storage) addRecord(rec Record) {
 			newRootPage.header.numOfPtr += 2
 			st.rootBlk = blk
 		}
-		st.ptb.unpin(st.rootBlk)
+		st.pageTable.unpin(st.rootBlk)
 	}
 }
 
@@ -122,7 +122,7 @@ func (st *Storage) Update(prVal interface{}, targetColName string, replaceTo int
 	col, _ := st.GetPrColumn()
 	prKey := st.GetPrimaryKey(prVal)
 	curBlk := st.SearchPrKey(prKey)
-	curPage := st.ptb.pin(curBlk)
+	curPage := st.pageTable.pin(curBlk)
 	// レコードの書き換え
 	// 対象のカラムを検索
 	targetColIndex := -1
@@ -168,14 +168,14 @@ func (st *Storage) Update(prVal interface{}, targetColName string, replaceTo int
 	copy(rec.data[targetCol.pos:targetCol.pos+targetCol.Size()], toBuf)
 
 	curPage.cells[cellIdx] = KeyValueCell{key: rec.getKey(), rec: rec}
-	st.ptb.unpin(curBlk)
+	st.pageTable.unpin(curBlk)
 	// UpdateInfoの作成
 	updateInfo := NewUpdateInfo(curBlk.BlockNum, ptrIdx, uint32(targetColIndex), fromBuf, toBuf)
 	return updateInfo
 }
 
 func (st *Storage) UpdateFromInfo(ui *UpdateInfo) {
-	curPage := st.ptb.pin(NewBlockId(ui.PageIdx, StorageFile))
+	curPage := st.pageTable.pin(NewBlockId(ui.PageIdx, StorageFile))
 	cellIdx := curPage.ptrs[ui.PtrIdx-1]
 	rec := curPage.cells[cellIdx].(KeyValueCell).rec
 	targetCol := st.cols[ui.ColNum]
@@ -191,7 +191,7 @@ func (st *Storage) selectInt(col Column) (res []interface{}, err error) {
 	pageQueue.Push(int(st.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := st.ptb.read(NewBlockId(curPageIndex, StorageFile))
+		curPage := st.pageTable.read(NewBlockId(curPageIndex, StorageFile))
 		if curPage.header.isLeaf {
 			for _, ptr := range curPage.ptrs {
 				rec := curPage.cells[ptr].(KeyValueCell).rec
@@ -217,7 +217,7 @@ func (st *Storage) selectChar(col Column) (res []interface{}, err error) {
 	pageQueue.Push(int(st.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := st.ptb.read(NewBlockId(curPageIndex, StorageFile))
+		curPage := st.pageTable.read(NewBlockId(curPageIndex, StorageFile))
 		if curPage.header.isLeaf {
 			for _, ptr := range curPage.ptrs {
 				rec := curPage.cells[ptr].(KeyValueCell).rec
@@ -289,7 +289,7 @@ func (st *Storage) Print() {
 	pageQueue.Push(int(st.rootBlk.BlockNum))
 	for !pageQueue.IsEmpty() {
 		curPageIndex := uint32(pageQueue.Pop())
-		curPage := st.ptb.read(NewBlockId(curPageIndex, StorageFile))
+		curPage := st.pageTable.read(NewBlockId(curPageIndex, StorageFile))
 		fmt.Printf("Page Index is %d\n", curPageIndex)
 		curPage.info()
 		if !curPage.header.isLeaf {
@@ -331,7 +331,7 @@ func (st *Storage) GetPrimaryKey(prVal interface{}) int32 {
 }
 
 func (st *Storage) SearchPrKey(prKey int32) BlockId {
-	rootPage := st.ptb.pin(st.rootBlk)
+	rootPage := st.pageTable.pin(st.rootBlk)
 	if rootPage.header.numOfPtr == 0 {
 		panic(errors.New("unexpected"))
 	}
@@ -346,11 +346,11 @@ func (st *Storage) SearchPrKey(prKey int32) BlockId {
 			childBlkId = curPage.cells[curPage.ptrs[idx]].(KeyCell).pageIndex
 		}
 		childBlk := NewBlockId(childBlkId, StorageFile)
-		childPage := st.ptb.pin(childBlk)
-		st.ptb.unpin(curBlk)
+		childPage := st.pageTable.pin(childBlk)
+		st.pageTable.unpin(curBlk)
 		curBlk = childBlk
 		curPage = childPage
 	}
-	st.ptb.unpin(curBlk)
+	st.pageTable.unpin(curBlk)
 	return curBlk
 }

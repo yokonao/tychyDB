@@ -20,14 +20,14 @@ func TestFileMgr(t *testing.T) {
 	byteLen := 42000
 	token := make([]byte, byteLen)
 	rand.Read(token)
-	fm := storage.NewFileMgr()
-	defer fm.Clean()
+	fileManager := storage.NewFileMgr()
+	defer fileManager.Clean()
 	numBlocks := (byteLen + storage.PageSize) / storage.PageSize
 	for curBlkId := 0; curBlkId < numBlocks; curBlkId++ {
 		curBlk := storage.NewBlockId(uint32(curBlkId), testFName)
 		lower := curBlkId * storage.PageSize
 		upper := min(byteLen, (curBlkId+1)*storage.PageSize)
-		fm.Write(curBlk, token[lower:upper])
+		fileManager.Write(curBlk, token[lower:upper])
 	}
 
 	for curBlkId := 0; curBlkId < numBlocks; curBlkId++ {
@@ -35,7 +35,7 @@ func TestFileMgr(t *testing.T) {
 		lower := curBlkId * storage.PageSize
 		upper := min(byteLen, (curBlkId+1)*storage.PageSize)
 		buf := token[lower:upper]
-		readLen, readBytes := fm.Read(curBlk)
+		readLen, readBytes := fileManager.Read(curBlk)
 
 		if readLen != len(buf) {
 			t.Error("byte length mismatch")
@@ -53,14 +53,14 @@ func TestFileMgrGetLastBlock(t *testing.T) {
 	byteLen := 42000
 	token := make([]byte, byteLen)
 	rand.Read(token)
-	fm := storage.NewFileMgr()
-	defer fm.Clean()
+	fileManager := storage.NewFileMgr()
+	defer fileManager.Clean()
 	numBlocks := (byteLen + storage.PageSize) / storage.PageSize
 	for curBlkId := 0; curBlkId < numBlocks; curBlkId++ {
 		curBlk := storage.NewBlockId(uint32(curBlkId), testFName)
 		lower := curBlkId * storage.PageSize
 		upper := min(byteLen, (curBlkId+1)*storage.PageSize)
-		fm.Write(curBlk, token[lower:upper])
+		fileManager.Write(curBlk, token[lower:upper])
 	}
 
 	curBlkId := numBlocks - 1
@@ -68,7 +68,7 @@ func TestFileMgrGetLastBlock(t *testing.T) {
 	upper := min(byteLen, (curBlkId+1)*storage.PageSize)
 	buf := token[lower:upper]
 
-	blkId, n, lastBytes := fm.ReadLastBlock(testFName)
+	blkId, n, lastBytes := fileManager.ReadLastBlock(testFName)
 	if blkId != numBlocks-1 {
 		t.Error("block id mismatch")
 	}

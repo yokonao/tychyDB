@@ -5,40 +5,40 @@ import (
 )
 
 type RecoveryMgr struct {
-	lm  *LogMgr
-	ptb *storage.PageTable
+	logManager *LogMgr
+	pageTable  *storage.PageTable
 }
 
-func NewRecoveryMgr(lm *LogMgr, ptb *storage.PageTable) *RecoveryMgr {
-	rm := &RecoveryMgr{}
-	rm.lm = lm
-	rm.ptb = ptb
-	return rm
+func NewRecoveryMgr(logManager *LogMgr, pageTable *storage.PageTable) *RecoveryMgr {
+	recoveryManager := &RecoveryMgr{}
+	recoveryManager.logManager = logManager
+	recoveryManager.pageTable = pageTable
+	return recoveryManager
 }
 
-func (rm *RecoveryMgr) Begin(txn *Transaction) {
-	rm.lm.addLog(txn.txnId, BEGIN)
+func (recoveryManager *RecoveryMgr) Begin(txn *Transaction) {
+	recoveryManager.logManager.addLog(txn.txnId, BEGIN)
 }
 
-func (rm *RecoveryMgr) Commit(txn *Transaction) {
-	rm.lm.addLog(txn.txnId, COMMIT)
-	rm.lm.WritePage()
+func (recoveryManager *RecoveryMgr) Commit(txn *Transaction) {
+	recoveryManager.logManager.addLog(txn.txnId, COMMIT)
+	recoveryManager.logManager.WritePage()
 }
-func (rm *RecoveryMgr) Abort(txn *Transaction) {
-	rm.lm.addLog(txn.txnId, ABORT)
+func (recoveryManager *RecoveryMgr) Abort(txn *Transaction) {
+	recoveryManager.logManager.addLog(txn.txnId, ABORT)
 }
 
-func (rm *RecoveryMgr) Update(txn *Transaction, updateInfo storage.UpdateInfo) {
-	log := rm.lm.addLog(txn.txnId, UPDATE)
+func (recoveryManager *RecoveryMgr) Update(txn *Transaction, updateInfo storage.UpdateInfo) {
+	log := recoveryManager.logManager.addLog(txn.txnId, UPDATE)
 	log.addUpdateInfo(updateInfo)
-	rm.ptb.SetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile), log.lsn)
+	recoveryManager.pageTable.SetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile), log.lsn)
 }
 
-func (rm *RecoveryMgr) LogRedo(st *storage.Storage) {
+func (recoveryManager *RecoveryMgr) LogRedo(st *storage.Storage) {
 	redoPool := map[TxnId]bool{}
 	txnTable := map[TxnId]TxnStatus{}
 	// log file full scan
-	logIter := NewLogIter(rm.lm, 0)
+	logIter := NewLogIter(recoveryManager.logManager, 0)
 	for !logIter.IsEnd() {
 		log, err := logIter.Next()
 		if err != nil {
@@ -60,7 +60,7 @@ func (rm *RecoveryMgr) LogRedo(st *storage.Storage) {
 	}
 
 	// redo if txn is valid
-	logIter = NewLogIter(rm.lm, 0)
+	logIter = NewLogIter(recoveryManager.logManager, 0)
 	for !logIter.IsEnd() {
 		log, err := logIter.Next()
 		if err != nil {

@@ -12,24 +12,24 @@ type LogMgr struct {
 	UniqueLSN     uint32
 	UniquePageNum uint32
 	LogPage       *LogPage // I used UpperCase for testing, but this should be lowerCamelCase.
-	fm            storage.FileMgr
+	fileManager   storage.FileMgr
 	FlashedLSN    uint32
 }
 
-func NewLogMgr(fm storage.FileMgr) *LogMgr {
+func NewLogMgr(fileManager storage.FileMgr) *LogMgr {
 	logMgr := LogMgr{}
 	logMgr.UniqueLSN = 1 // 1-indexed, because flushed lsn is 0
 	logMgr.UniquePageNum = 0
-	logMgr.fm = fm
+	logMgr.fileManager = fileManager
 	logMgr.FlashedLSN = 0
 	logMgr.LogPage = newLogPage(logMgr.getUniquePageNum())
 	return &logMgr
 }
 
-func NewLogMgrFromFile(fm storage.FileMgr) *LogMgr {
+func NewLogMgrFromFile(fileManager storage.FileMgr) *LogMgr {
 	logMgr := LogMgr{}
-	logMgr.fm = fm
-	blk, n, buf := fm.ReadLastBlock(LogFile)
+	logMgr.fileManager = fileManager
+	blk, n, buf := fileManager.ReadLastBlock(LogFile)
 	if n == 0 {
 		panic(errors.New("page is empty"))
 	}
@@ -40,37 +40,37 @@ func NewLogMgrFromFile(fm storage.FileMgr) *LogMgr {
 	return &logMgr
 }
 
-func (lm *LogMgr) logAt(idx uint32) (Log, error) {
-	return lm.LogPage.logAt(idx)
+func (logManager *LogMgr) logAt(idx uint32) (Log, error) {
+	return logManager.LogPage.logAt(idx)
 }
 
-func (lm *LogMgr) isEnd(idx uint32) bool {
-	return lm.LogPage.isEnd(idx)
+func (logManager *LogMgr) isEnd(idx uint32) bool {
+	return logManager.LogPage.isEnd(idx)
 }
 
-func (lm *LogMgr) getUniqueLSN() uint32 {
-	res := lm.UniqueLSN
-	lm.UniqueLSN++
+func (logManager *LogMgr) getUniqueLSN() uint32 {
+	res := logManager.UniqueLSN
+	logManager.UniqueLSN++
 	return res
 }
 
-func (lm *LogMgr) getUniquePageNum() uint32 {
-	res := lm.UniquePageNum
-	lm.UniquePageNum++
+func (logManager *LogMgr) getUniquePageNum() uint32 {
+	res := logManager.UniquePageNum
+	logManager.UniquePageNum++
 	return res
 }
 
-func (lm *LogMgr) addLog(txnId TxnId, logType uint32) *Log {
-	log := newUniqueLog(lm.getUniqueLSN(), txnId, logType)
-	lm.LogPage.addLog(log)
+func (logManager *LogMgr) addLog(txnId TxnId, logType uint32) *Log {
+	log := newUniqueLog(logManager.getUniqueLSN(), txnId, logType)
+	logManager.LogPage.addLog(log)
 	return log
 }
 
-func (lm *LogMgr) WritePage() {
-	lm.fm.Write(lm.LogPage.blk, lm.LogPage.ToBytes())
-	lm.FlashedLSN = lm.LogPage.maxLSN()
+func (logManager *LogMgr) WritePage() {
+	logManager.fileManager.Write(logManager.LogPage.blk, logManager.LogPage.ToBytes())
+	logManager.FlashedLSN = logManager.LogPage.maxLSN()
 }
 
-func (lm *LogMgr) Print() {
-	lm.LogPage.Print()
+func (logManager *LogMgr) Print() {
+	logManager.LogPage.Print()
 }
