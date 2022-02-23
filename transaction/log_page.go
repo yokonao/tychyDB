@@ -39,7 +39,7 @@ func NewLogPageFromBytes(bytes []byte) *LogPage {
 	for i := 0; i < int(pg.numLogs); i++ {
 		iter.NextUInt32() // skip len(Log)
 		log := &Log{}
-		log.txnId = iter.NextUInt32()
+		log.txnId = TxnId(iter.NextUInt32())
 		log.lsn = iter.NextUInt32()
 		log.logType = iter.NextUInt32()
 		if log.logType == UPDATE {

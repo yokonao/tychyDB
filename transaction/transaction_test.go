@@ -187,22 +187,22 @@ func TestLogIterator(t *testing.T) {
 	logIter := transaction.NewLogIter(lm, 0)
 	log, _ := logIter.Next()
 	assert.EqualUInt32(t, log.LSN(), 1)
-	assert.EqualUInt32(t, log.TxnID(), 0)
+	assert.EqualUInt32(t, uint32(log.TxnID()), 0)
 	assert.EqualUInt32(t, log.LogType(), 0)
 
 	log, _ = logIter.Next()
 	assert.EqualUInt32(t, log.LSN(), 2)
-	assert.EqualUInt32(t, log.TxnID(), 1)
+	assert.EqualUInt32(t, uint32(log.TxnID()), 1)
 	assert.EqualUInt32(t, log.LogType(), 0)
 
 	log, _ = logIter.Next()
 	assert.EqualUInt32(t, log.LSN(), 3)
-	assert.EqualUInt32(t, log.TxnID(), 1)
+	assert.EqualUInt32(t, uint32(log.TxnID()), 1)
 	assert.EqualUInt32(t, log.LogType(), 2)
 
 	log, _ = logIter.Next()
 	assert.EqualUInt32(t, log.LSN(), 4)
-	assert.EqualUInt32(t, log.TxnID(), 0)
+	assert.EqualUInt32(t, uint32(log.TxnID()), 0)
 	assert.EqualUInt32(t, log.LogType(), 3)
 
 	log, err := logIter.Next()

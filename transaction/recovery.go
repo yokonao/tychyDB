@@ -35,6 +35,9 @@ func (rm *RecoveryMgr) Update(txn *Transaction, updateInfo storage.UpdateInfo) {
 }
 
 func (rm *RecoveryMgr) LogRedo(st *storage.Storage) {
+	// redoPool := map[uint32]bool{}
+	// txnTable := map[uint32]TxnStatus{}
+
 	logIter := NewLogIter(rm.lm, 0)
 	for !logIter.IsEnd() {
 		log, err := logIter.Next()
