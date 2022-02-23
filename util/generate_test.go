@@ -14,9 +14,9 @@ func TestGenUInt32(t *testing.T) {
 	gs.PutUInt32(111)
 
 	iter := util.NewIterStruct(0, gs.DumpBytes())
-	assert.EqualUint32(t, iter.NextUInt32(), 10)
-	assert.EqualUint32(t, iter.NextUInt32(), 11)
-	assert.EqualUint32(t, iter.NextUInt32(), 111)
+	assert.EqualUInt32(t, iter.NextUInt32(), 10)
+	assert.EqualUInt32(t, iter.NextUInt32(), 11)
+	assert.EqualUInt32(t, iter.NextUInt32(), 111)
 }
 
 func TestGenBool(t *testing.T) {
@@ -29,12 +29,12 @@ func TestGenBool(t *testing.T) {
 	gs.PutBool(true)
 
 	iter := util.NewIterStruct(0, gs.DumpBytes())
-	assert.EqualUint32(t, iter.NextUInt32(), 10)
-	assert.EqualBool(t, iter.NextBool(), false)
-	assert.EqualUint32(t, iter.NextUInt32(), 11)
-	assert.EqualBool(t, iter.NextBool(), true)
-	assert.EqualUint32(t, iter.NextUInt32(), 111)
-	assert.EqualBool(t, iter.NextBool(), true)
+	assert.EqualUInt32(t, iter.NextUInt32(), 10)
+	assert.Equal(t, iter.NextBool(), false)
+	assert.EqualUInt32(t, iter.NextUInt32(), 11)
+	assert.Equal(t, iter.NextBool(), true)
+	assert.EqualUInt32(t, iter.NextUInt32(), 111)
+	assert.Equal(t, iter.NextBool(), true)
 }
 
 func TestGenBytes(t *testing.T) {
@@ -50,14 +50,14 @@ func TestGenBytes(t *testing.T) {
 	gs.PutBytes(12, t_gs.DumpBytes())
 
 	iter := util.NewIterStruct(0, gs.DumpBytes())
-	assert.EqualUint32(t, iter.NextUInt32(), 11)
-	assert.EqualUint32(t, iter.NextUInt32(), 10)
-	assert.EqualUint32(t, iter.NextUInt32(), 11)
-	assert.EqualUint32(t, iter.NextUInt32(), 111)
-	assert.EqualUint32(t, iter.NextUInt32(), 22)
-	assert.EqualUint32(t, iter.NextUInt32(), 10)
-	assert.EqualUint32(t, iter.NextUInt32(), 11)
-	assert.EqualUint32(t, iter.NextUInt32(), 111)
+	assert.EqualUInt32(t, iter.NextUInt32(), 11)
+	assert.EqualUInt32(t, iter.NextUInt32(), 10)
+	assert.EqualUInt32(t, iter.NextUInt32(), 11)
+	assert.EqualUInt32(t, iter.NextUInt32(), 111)
+	assert.EqualUInt32(t, iter.NextUInt32(), 22)
+	assert.EqualUInt32(t, iter.NextUInt32(), 10)
+	assert.EqualUInt32(t, iter.NextUInt32(), 11)
+	assert.EqualUInt32(t, iter.NextUInt32(), 111)
 }
 
 func TestPutUInt32WithSize(t *testing.T) {
@@ -65,12 +65,12 @@ func TestPutUInt32WithSize(t *testing.T) {
 	gs.PutStringWithSize("hoge", 10)
 
 	iter := util.NewIterStruct(0, gs.DumpBytes())
-	assert.EqualString(t, iter.NextStringWithSize(10), "hoge")
+	assert.Equal(t, iter.NextStringWithSize(10), "hoge")
 }
 
 func TestToByteStringWithSize(t *testing.T) {
 	bytes := util.ToByteStringWithSize("hogehoge", 8)
 
 	iter := util.NewIterStruct(0, bytes)
-	assert.EqualString(t, iter.NextStringWithSize(8), "hogehoge")
+	assert.Equal(t, iter.NextStringWithSize(8), "hogehoge")
 }

@@ -15,9 +15,9 @@ func TestIterUInt32(t *testing.T) {
 	binary.BigEndian.PutUint32(bytes[2*util.IntSize:3*util.IntSize], 30)
 
 	iter := util.NewIterStruct(0, bytes)
-	assert.EqualUint32(t, iter.NextUInt32(), 10)
-	assert.EqualUint32(t, iter.NextUInt32(), 16)
-	assert.EqualUint32(t, iter.NextUInt32(), 30)
+	assert.EqualUInt32(t, iter.NextUInt32(), 10)
+	assert.EqualUInt32(t, iter.NextUInt32(), 16)
+	assert.EqualUInt32(t, iter.NextUInt32(), 30)
 }
 
 func TestIterBool(t *testing.T) {
@@ -27,9 +27,9 @@ func TestIterBool(t *testing.T) {
 	bytes[5] = 0
 
 	iter := util.NewIterStruct(0, bytes)
-	assert.EqualBool(t, iter.NextBool(), true)
-	assert.EqualUint32(t, iter.NextUInt32(), 16)
-	assert.EqualBool(t, iter.NextBool(), false)
+	assert.Equal(t, iter.NextBool(), true)
+	assert.EqualUInt32(t, iter.NextUInt32(), 16)
+	assert.Equal(t, iter.NextBool(), false)
 }
 
 func TestIterBytes(t *testing.T) {

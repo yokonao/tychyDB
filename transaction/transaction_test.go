@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/tychyDB/assert"
 	"github.com/tychyDB/storage"
 	"github.com/tychyDB/transaction"
 )
@@ -199,50 +200,24 @@ func TestLogIterator(t *testing.T) {
 
 	logIter := transaction.NewLogIter(lm, 0)
 	log, _ := logIter.Next()
-	if val := log.LSN(); val != 1 {
-		t.Errorf("invalid LSN expect %d got %d", 1, val)
-	}
-
-	if val := log.TxnID(); val != 0 {
-		t.Errorf("invalid TxnID expect %d got %d", 0, val)
-	}
-
-	if val := log.LogType(); val != 0 {
-		t.Errorf("invalid LogType expect %d got %d", 0, val)
-	}
+	assert.EqualUInt32(t, log.LSN(), 1)
+	assert.EqualUInt32(t, log.TxnID(), 0)
+	assert.EqualUInt32(t, log.LogType(), 0)
 
 	log, _ = logIter.Next()
-	if val := log.LSN(); val != 2 {
-		t.Errorf("invalid LSN expect %d got %d", 2, val)
-	}
-	if val := log.TxnID(); val != 1 {
-		t.Errorf("invalid TxnID expect %d got %d", 1, val)
-	}
-	if val := log.LogType(); val != 0 {
-		t.Errorf("invalid LogType expect %d got %d", 0, val)
-	}
+	assert.EqualUInt32(t, log.LSN(), 2)
+	assert.EqualUInt32(t, log.TxnID(), 1)
+	assert.EqualUInt32(t, log.LogType(), 0)
 
 	log, _ = logIter.Next()
-	if val := log.LSN(); val != 3 {
-		t.Errorf("invalid LSN expect %d got %d", 3, val)
-	}
-	if val := log.TxnID(); val != 1 {
-		t.Errorf("invalid TxnID expect %d got %d", 1, val)
-	}
-	if val := log.LogType(); val != 2 {
-		t.Errorf("invalid LogType expect %d got %d", 2, val)
-	}
+	assert.EqualUInt32(t, log.LSN(), 3)
+	assert.EqualUInt32(t, log.TxnID(), 1)
+	assert.EqualUInt32(t, log.LogType(), 2)
 
 	log, _ = logIter.Next()
-	if val := log.LSN(); val != 4 {
-		t.Errorf("invalid LSN expect %d got %d", 4, val)
-	}
-	if val := log.TxnID(); val != 0 {
-		t.Errorf("invalid TxnID expect %d got %d", 0, val)
-	}
-	if val := log.LogType(); val != 3 {
-		t.Errorf("invalid LogType expect %d got %d", 3, val)
-	}
+	assert.EqualUInt32(t, log.LSN(), 4)
+	assert.EqualUInt32(t, log.TxnID(), 0)
+	assert.EqualUInt32(t, log.LogType(), 3)
 
 	log, err := logIter.Next()
 	if err != transaction.ErrOutOfBounds {
