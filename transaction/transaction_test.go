@@ -110,15 +110,12 @@ func TestLogLSN(t *testing.T) {
 	rm.Begin(txn)
 	updateInfo := st.Update(2, "fuga", 33)
 	rm.Update(txn, updateInfo)
+	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
 
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 2 {
-		t.Errorf("invalid pageLSN expect %d got %d", 2, val)
-	}
 	st.Flush()
 	st = storage.NewStorageFromFile(fm, ptb)
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 2 {
-		t.Errorf("invalid pageLSN expect %d got %d", 2, val)
-	}
+	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
+
 	rm.Commit(txn)
 }
 
@@ -146,21 +143,17 @@ func TestLogLSNConcurrently(t *testing.T) {
 	rm.Begin(txnB)
 	updateInfo = st.Update(2, "fuga", 3335)
 
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 2 {
-		t.Errorf("invalid pageLSN expect %d got %d", 2, val)
-	}
+	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
+
 	rm.Update(txnA, updateInfo)
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 4 {
-		t.Errorf("invalid pageLSN expect %d got %d", 4, val)
-	}
+
+	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 4)
 	rm.Abort(txnB)
 	rm.Commit(txnA)
 
 	st.Flush()
 	st = storage.NewStorageFromFile(fm, ptb)
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 4 {
-		t.Errorf("invalid pageLSN expect %d got %d", 4, val)
-	}
+	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 4)
 }
 
 func TestLogIterator(t *testing.T) {
@@ -231,22 +224,16 @@ func TestUpdateFromLog(t *testing.T) {
 	rm.Update(txn, updateInfo)
 
 	updateInfo = st.Update(2, "fuga", 3335)
+	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 2)
 
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 2 {
-		t.Errorf("invalid pageLSN expect %d got %d", 2, val)
-	}
 	rm.Update(txn, updateInfo)
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 3 {
-		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
-	}
+	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 3)
 
 	st.Flush()
 	st = storage.NewStorageFromFile(fm, ptb)
-	if val := ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)); val != 3 {
-		t.Errorf("invalid pageLSN expect %d got %d", 3, val)
-	}
-	rm.Commit(txn)
+	assert.EqualUInt32(t, ptb.GetPageLSN(storage.NewBlockId(updateInfo.PageIdx, storage.StorageFile)), 3)
 
+	rm.Commit(txn)
 	st.Select(false)
 }
 
@@ -284,20 +271,12 @@ func TestRedoFromLog(t *testing.T) {
 	}
 	st.Clear()
 	res, _ = st.Select(false, "hoge", "fuga")
-	if val := res[1][3]; val.(int32) != -13 {
-		t.Errorf("expected: -13, actual: %d", val)
-	}
-	if val := res[1][5]; val.(int32) != 5 {
-		t.Errorf("expected: 5, actual: %d", val)
-	}
+	assert.EqualInt32(t, res[1][3].(int32), -13)
+	assert.EqualInt32(t, res[1][5].(int32), 5)
 	rm.LogRedo(&st)
 	res, _ = st.Select(false, "hoge", "fuga")
-	if val := res[1][3]; val.(int32) != 3337 {
-		t.Errorf("expected: 3337, actual: %d", val)
-	}
-	if val := res[1][5]; val.(int32) != 33 {
-		t.Errorf("expected: 33, actual: %d", val)
-	}
+	assert.EqualInt32(t, res[1][3].(int32), 3337)
+	assert.EqualInt32(t, res[1][5].(int32), 33)
 }
 
 func TestRedoFromLogFile(t *testing.T) {
@@ -313,11 +292,11 @@ func TestRedoFromLogFile(t *testing.T) {
 	lm := transaction.NewLogMgrFromFile(*fm)
 	rm := transaction.NewRecoveryMgr(lm, ptb)
 
-	res, _ := st.Select(true, "hoge", "fuga", "piyo")
+	res, _ := st.Select(false, "hoge", "fuga", "piyo")
 	assert.EqualInt32(t, res[1][3].(int32), -13)
 	assert.EqualInt32(t, res[1][5].(int32), 5)
 	rm.LogRedo(&st)
-	res, _ = st.Select(true, "hoge", "fuga", "piyo")
+	res, _ = st.Select(false, "hoge", "fuga", "piyo")
 	assert.EqualInt32(t, res[1][3].(int32), 4447)
 	assert.EqualInt32(t, res[1][5].(int32), 33)
 }
